@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import './orm_styles.css';
-
+import CONFIG from '../config.json';
+const CONFIGURATION = CONFIG.default || CONFIG;
 // ============= GOOGLE CALENDAR CONFIG =============
 const GOOGLE_CALENDAR_CONFIG = {
-  apiKey: 'AIzaSyASFEwXR0QT22-R41ruunuVbSX9W55N-H8',
-  clientId: '1063661148403-jv2cfnesdfv8asijmrl5ls3gsptncnkg.apps.googleusercontent.com',
-  calendarId: 'bwolfson6@gmail.com',
-  scope: 'https://www.googleapis.com/auth/calendar.readonly',
-  discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+  apiKey: CONFIGURATION.google_calendar_config.apiKey,
+  clientId: CONFIGURATION.google_calendar_config.clientId,
+  calendarId: CONFIGURATION.google_calendar_config.calendarId,
+  scope: CONFIGURATION.google_calendar_config.scope,
+  discoveryDocs: CONFIGURATION.google_calendar_config.discoveryDocs,
 };
-
 // ============= GOOGLE CALENDAR COMPONENT =============
 const GoogleCalendar = ({ onSelectSlot }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -336,7 +336,7 @@ const HomePage = ({ onOpenModal }) => {
       <section className="hero">
         <div className="hero-content">
           <div className="hero-logo-container">
-        <img src="/1769689546174.png" alt="Old Reliable Mechanics Logo" className="hero-logo" />         
+            <img src="/1769609823422.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
           </div>
         </div>
         <div className="hero-accent"></div>
@@ -423,13 +423,13 @@ const ContactPage = ({ onOpenModal }) => {
     <main className="page contact-page">
       <div className="page-header">
         <h1>Contact Us</h1>
-        <p>Get in touch with Old Reliable Mechanics</p>
+        <p>Get in touch with Old Reliable Automotive</p>
       </div>
 
       <section className="contact-main">
         <div className="contact-info">
           <h2>Get in Touch</h2>
-          
+
           <div className="contact-method">
             <h3>📞 Phone</h3>
             <p><a href="tel:+15551234567">(555) 123-4567</a></p>
@@ -438,31 +438,35 @@ const ContactPage = ({ onOpenModal }) => {
 
           <div className="contact-method">
             <h3>✉️ Email</h3>
-            <p><a href="mailto:hello@oldreliablemechanics.com">hello@oldreliablemechanics.com</a></p>
+            <p><a href="mailto:oldreliablemotive@gmail.com">oldreliablemotive@gmail.com</a></p>
             <p className="note">We typically respond within 2 hours</p>
           </div>
 
           <div className="contact-method">
             <h3>📍 Service Area</h3>
-            <p>We provide mobile service throughout the metro area</p>
+            <p>We provide mobile service throughout the Metro Atlanta area</p>
           </div>
         </div>
 
         <div className="social-media">
           <h2>Follow Us</h2>
           <div className="social-links">
+            {/*
             <a href="https://facebook.com" className="social-link" target="_blank" rel="noopener noreferrer">
               <span>f</span> Facebook
             </a>
+            */}
             <a href="https://instagram.com" className="social-link" target="_blank" rel="noopener noreferrer">
               <span>📷</span> Instagram
             </a>
+            {/*
             <a href="https://twitter.com" className="social-link" target="_blank" rel="noopener noreferrer">
               <span>𝕏</span> Twitter
             </a>
             <a href="https://youtube.com" className="social-link" target="_blank" rel="noopener noreferrer">
               <span>▶️</span> YouTube
             </a>
+            */}
           </div>
         </div>
       </section>
@@ -513,7 +517,7 @@ const FAQTestimoniesPage = () => {
     {
       id: 1,
       question: "Do you come to me or do I need to come to your shop?",
-      answer: "We come to you! Old Reliable Mechanics is a mobile service. We'll arrive at your location with our equipment to service your vehicle."
+      answer: "We come to you! Old Reliable Automotive is a mobile service. We'll arrive at your location with our equipment to service your vehicle."
     },
     {
       id: 2,
@@ -627,11 +631,12 @@ const FAQTestimoniesPage = () => {
 
 // ============= NAVIGATION =============
 const Navigation = ({ currentPage, onPageChange, onOpenModal }) => {
+
   return (
     <nav className="navbar">
       <div className="nav-container">
         <div className="nav-logo">
-          <span className="logo-icon">⚙️</span>
+          <span className="logo-icon">⚙️{CONFIGURATION.header.business_name}</span>
         </div>
         <ul className="nav-menu">
           <li>
@@ -666,25 +671,33 @@ const Navigation = ({ currentPage, onPageChange, onOpenModal }) => {
 
 // ============= FOOTER =============
 const Footer = () => {
+  const footerConfig = CONFIGURATION.footer;
+  const contactConfig = CONFIGURATION.contact;
   return (
     <footer className="footer">
       <div className="footer-content">
         <div className="footer-section">
-          <h4>Old Reliable Mechanics</h4>
-          <p>Mobile automotive service you can depend on.</p>
+          <h4>{CONFIGURATION.footer.copyright}</h4>
+          <p>{CONFIGURATION.footer.disclaimer}</p>
         </div>
         <div className="footer-section">
           <h4>Hours</h4>
-          <p>Mon-Fri: 8am - 6pm<br/>Sat: 9am - 2pm<br/>Sun: Closed</p>
+          <p>Mon: {footerConfig.hours.monday}<br />
+            Tue: {footerConfig.hours.tuesday}<br />
+            Wed: {footerConfig.hours.wednesday}<br />
+            Thu: {footerConfig.hours.thursday}<br />
+            Fri: {footerConfig.hours.friday}<br />
+            Sat: {footerConfig.hours.saturday}<br />
+            Sun: {footerConfig.hours.sunday}</p>
         </div>
         <div className="footer-section">
           <h4>Contact</h4>
-          <p><a href="tel:+15551234567">(555) 123-4567</a><br/>
-          <a href="mailto:hello@oldreliablemechanics.com">hello@oldreliablemechanics.com</a></p>
+          <p><a href="tel:{contactConfig.phone}">{contactConfig.phone}</a><br />
+            <a href={`mailto:${contactConfig.email}`}>{contactConfig.email}</a>  </p>
         </div>
       </div>
       <div className="footer-bottom">
-        <p>&copy; 2026 Old Reliable Mechanics. All rights reserved.</p>
+        <p>&copy; 2026 Old Reliable Automotive. All rights reserved.</p>
       </div>
     </footer>
   );
