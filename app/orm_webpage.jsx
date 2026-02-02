@@ -6,11 +6,11 @@ import CONFIG from '../config.json';
 const CONFIGURATION = CONFIG.default || CONFIG;
 // ============= GOOGLE CALENDAR CONFIG =============
 const GOOGLE_CALENDAR_CONFIG = {
-  apiKey: CONFIGURATION.google_calendar_config.apiKey,
-  clientId: CONFIGURATION.google_calendar_config.clientId,
-  calendarId: CONFIGURATION.google_calendar_config.calendarId,
-  scope: CONFIGURATION.google_calendar_config.scope,
-  discoveryDocs: CONFIGURATION.google_calendar_config.discoveryDocs,
+  apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY || CONFIGURATION.google_calendar_config?.apiKey || '',
+  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || CONFIGURATION.google_calendar_config?.clientId || '',
+  calendarId: process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID || CONFIGURATION.google_calendar_config?.calendarId || '',
+  scope: process.env.NEXT_PUBLIC_GOOGLE_SCOPE || CONFIGURATION.google_calendar_config?.scope || 'https://www.googleapis.com/auth/calendar.readonly',
+  discoveryDocs: CONFIGURATION.google_calendar_config?.discoveryDocs || ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
 };
 // ============= GOOGLE CALENDAR COMPONENT =============
 const GoogleCalendar = ({ onSelectSlot }) => {
@@ -181,7 +181,7 @@ const GoogleCalendar = ({ onSelectSlot }) => {
   );
 };
 
-// ============= MODAL COMPONENT =============
+/* ============= MODAL COMPONENT (PRESERVED FOR REFERENCE) =============
 const AppointmentModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -327,183 +327,288 @@ const AppointmentModal = ({ isOpen, onClose }) => {
     </div>
   );
 };
+============= END MODAL COMPONENT =============*/
+
+// ============= HERO HEADER (persistent across all pages) =============
+const HeroHeader = () => {
+  return (
+    <section className="hero">
+      <div className="hero-content">
+        <div className="hero-logo-container">
+          <img src="\grok_image_1769728748882-removebg-preview.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
+        </div>
+      </div>
+      <div className="hero-accent"></div>
+    </section>
+  );
+};
 
 // ============= HOME PAGE =============
-const HomePage = ({ onOpenModal }) => {
+const HomePage = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const services = [
+    { icon: '🔧', title: 'General Maintenance', desc: 'Oil changes, filter replacements, and routine upkeep' },
+    { icon: '🛞', title: 'Tire Service', desc: 'Rotation, balancing, and replacement' },
+    { icon: '🔋', title: 'Battery & Electrical', desc: 'Testing, replacement, and troubleshooting' },
+    { icon: '🚗', title: 'Brake Service', desc: 'Inspection, repair, and replacement' }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % services.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + services.length) % services.length);
+  };
+
   return (
     <main className="page home-page">
-      {/* Hero Section */}
-      <section className="hero">
-        <div className="hero-content">
-          <div className="hero-logo-container">
-            <img src="/1769609823422.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
-          </div>
-        </div>
-        <div className="hero-accent"></div>
-      </section>
-
-      {/* Services Overview 
+      {/* Services Overview */}
       <section className="services-preview">
         <h2>Our Services</h2>
-        <div className="services-grid">
-          <div className="service-card">
-            <div className="service-icon">🔧</div>
-            <h3>General Maintenance</h3>
-            <p>Oil changes, filter replacements, and routine upkeep</p>
+
+        {/* Desktop Grid */}
+        <div className="services-grid desktop-only">
+          {services.map((service, index) => (
+            <div key={index} className="service-card">
+              <div className="service-icon">{service.icon}</div>
+              <h3>{service.title}</h3>
+              <p>{service.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile Carousel */}
+        <div className="services-carousel mobile-only">
+          <button className="carousel-btn carousel-prev" onClick={prevSlide} aria-label="Previous">
+            ‹
+          </button>
+          <div className="carousel-container">
+            <div className="carousel-track" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+              {services.map((service, index) => (
+                <div key={index} className="service-card carousel-slide">
+                  <div className="service-icon">{service.icon}</div>
+                  <h3>{service.title}</h3>
+                  <p>{service.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="service-card">
-            <div className="service-icon">🛞</div>
-            <h3>Tire Service</h3>
-            <p>Rotation, balancing, and replacement</p>
-          </div>
-          <div className="service-card">
-            <div className="service-icon">🔋</div>
-            <h3>Battery & Electrical</h3>
-            <p>Testing, replacement, and troubleshooting</p>
-          </div>
-          <div className="service-card">
-            <div className="service-icon">🚗</div>
-            <h3>Brake Service</h3>
-            <p>Inspection, repair, and replacement</p>
+          <button className="carousel-btn carousel-next" onClick={nextSlide} aria-label="Next">
+            ›
+          </button>
+          <div className="carousel-dots">
+            {services.map((_, index) => (
+              <button
+                key={index}
+                className={`carousel-dot ${currentSlide === index ? 'active' : ''}`}
+                onClick={() => setCurrentSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
           </div>
         </div>
-      </section>
-*/}
-      {/* Why Choose Us 
-      <section className="why-us">
-        <h2>Why Choose Old Reliable?</h2>
-        <div className="features">
-          <div className="feature">
-            <div className="feature-number">1</div>
-            <h3>Mobile Service</h3>
-            <p>We come to you. No need to take time off work.</p>
-          </div>
-          <div className="feature">
-            <div className="feature-number">2</div>
-            <h3>Expert Technicians</h3>
-            <p>Years of experience with all makes and models</p>
-          </div>
-          <div className="feature">
-            <div className="feature-number">3</div>
-            <h3>Honest Pricing</h3>
-            <p>Transparent quotes with no hidden fees</p>
-          </div>
-          <div className="feature">
-            <div className="feature-number">4</div>
-            <h3>Quality Guarantee</h3>
-            <p>All work backed by our satisfaction guarantee</p>
-          </div>
-        </div>
-      </section>
-*/}
-      {/* Google Calendar Integration */}
-      <section className="calendar-section">
-        <h2>View Our Availability</h2>
-        <p>Check our calendar to see available appointment slots</p>
-        <GoogleCalendar onSelectSlot={(time) => {
-          console.log('Selected slot:', time);
-          onOpenModal();
-        }} />
       </section>
 
-      {/* CTA Section */}
-      <section className="cta-section">
-        <h2>Ready to Get Your Vehicle Serviced?</h2>
-        <button className="btn btn-primary btn-lg" onClick={onOpenModal}>
-          Schedule Your Service Today
-        </button>
+      {/* Google Calendar Integration */}
+      <section className="calendar-section">
+        <h5>Check our calendar to see available appointment slots</h5>
+        <GoogleCalendar onSelectSlot={(time) => {
+          console.log('Selected slot:', time);
+        }} />
       </section>
     </main>
   );
 };
 
 // ============= CONTACT PAGE =============
-const ContactPage = ({ onOpenModal }) => {
+const ContactPage = () => {
+  const [expandedSections, setExpandedSections] = useState({
+    contactInfo: false,
+    socialMedia: false,
+    contactForm: false
+  });
+
+  const [contactFormData, setContactFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: ''
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const handleContactChange = (e) => {
+    const { name, value } = e.target;
+    setContactFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleContactSubmit = (e) => {
+    e.preventDefault();
+
+    // Build mailto link with form data
+    const { name, email, phone, subject, message } = contactFormData;
+    const recipientEmail = CONFIGURATION.contact.email;
+
+    const emailBody = `Name: ${name}
+Email: ${email}
+Phone: ${phone || 'Not provided'}
+
+Message:
+${message}`;
+
+    const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+
+    // Open default email client
+    window.location.href = mailtoLink;
+  };
+
   return (
     <main className="page contact-page">
       <div className="page-header">
-        <h1>Contact Us</h1>
+        <h2>Contact Us</h2>
         <p>Get in touch with Old Reliable Automotive</p>
       </div>
 
-      <section className="contact-main">
-        <div className="contact-info">
-          <h2>Get in Touch</h2>
-
-          <div className="contact-method">
-            <h3>📞 Phone</h3>
-            <p><a href="tel:+15551234567">(555) 123-4567</a></p>
-            <p className="note">Call us Monday-Friday, 8am-6pm | Saturday 9am-2pm</p>
-          </div>
-
-          <div className="contact-method">
-            <h3>✉️ Email</h3>
-            <p><a href="mailto:oldreliablemotive@gmail.com">oldreliablemotive@gmail.com</a></p>
-            <p className="note">We typically respond within 2 hours</p>
-          </div>
-
-          <div className="contact-method">
-            <h3>📍 Service Area</h3>
-            <p>We provide mobile service throughout the Metro Atlanta area</p>
-          </div>
+      <div className="collapsible-container grid-two-column">
+        <div className="collapsible-section">
+          <button
+            className="collapsible-header"
+            onClick={() => toggleSection('contactInfo')}
+            aria-expanded={expandedSections.contactInfo}
+          >
+            <h2>Get in Touch</h2>
+            <span className="collapsible-toggle">{expandedSections.contactInfo ? '−' : '+'}</span>
+          </button>
+          {expandedSections.contactInfo && (
+            <div className="collapsible-content contact-info">
+              <div className="contact-method">
+                <h3>📞 Phone</h3>
+                <p><a href="tel:+15551234567">(555) 123-4567</a></p>
+                <p className="note">Call us Monday-Friday, 8am-6pm | Saturday 9am-2pm</p>
+              </div>
+              <hr className="divider-line" />
+              <div className="contact-method">
+                <h3>✉️ Email</h3>
+                <p><a href="mailto:oldreliablemotive@gmail.com">oldreliablemotive@gmail.com</a></p>
+                <p className="note">We typically respond within 2 hours</p>
+              </div>
+              <hr className="divider-line" />
+              <div className="contact-method">
+                <h3>📍 Service Area</h3>
+                <p>We provide mobile service throughout the Metro Atlanta area</p>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="social-media">
-          <h2>Follow Us</h2>
-          <div className="social-links">
-            {/*
-            <a href="https://facebook.com" className="social-link" target="_blank" rel="noopener noreferrer">
-              <span>f</span> Facebook
-            </a>
-            */}
-            <a href="https://instagram.com" className="social-link" target="_blank" rel="noopener noreferrer">
-              <span>📷</span> Instagram
-            </a>
-            {/*
-            <a href="https://twitter.com" className="social-link" target="_blank" rel="noopener noreferrer">
-              <span>𝕏</span> Twitter
-            </a>
-            <a href="https://youtube.com" className="social-link" target="_blank" rel="noopener noreferrer">
-              <span>▶️</span> YouTube
-            </a>
-            */}
-          </div>
+        <div className="collapsible-section">
+          <button
+            className="collapsible-header"
+            onClick={() => toggleSection('socialMedia')}
+            aria-expanded={expandedSections.socialMedia}
+          >
+            <h2>Follow Us</h2>
+            <span className="collapsible-toggle">{expandedSections.socialMedia ? '−' : '+'}</span>
+          </button>
+          {expandedSections.socialMedia && (
+            <div className="collapsible-content social-media">
+              <div className="social-links">
+                <a href="https://instagram.com" className="social-link" target="_blank" rel="noopener noreferrer">
+                  <span>📷</span> Instagram
+                </a>
+              </div>
+            </div>
+          )}
         </div>
-      </section>
-
-      <section className="contact-form-section">
-        <h2>Send Us a Message</h2>
-        <form className="contact-form">
-          <div className="form-group">
-            <label htmlFor="contact-name">Name</label>
-            <input id="contact-name" type="text" placeholder="Your name" required />
+      </div>
+      <div className="collapsible-section">
+        <button
+          className="collapsible-header"
+          onClick={() => toggleSection('contactForm')}
+          aria-expanded={expandedSections.contactForm}
+        >
+          <h2>Send Us a Message</h2>
+          <span className="collapsible-toggle">{expandedSections.contactForm ? '−' : '+'}</span>
+        </button>
+        {expandedSections.contactForm && (
+          <div className="collapsible-content contact-form-section">
+            <form className="contact-form" onSubmit={handleContactSubmit}>
+              <div className="form-group">
+                <label htmlFor="contact-name">Name</label>
+                <input
+                  id="contact-name"
+                  name="name"
+                  type="text"
+                  placeholder="Your name"
+                  value={contactFormData.name}
+                  onChange={handleContactChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="contact-email">Email</label>
+                <input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={contactFormData.email}
+                  onChange={handleContactChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="contact-phone">Phone</label>
+                <input
+                  id="contact-phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={contactFormData.phone}
+                  onChange={handleContactChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="contact-subject">Subject</label>
+                <input
+                  id="contact-subject"
+                  name="subject"
+                  type="text"
+                  placeholder="What is this about?"
+                  value={contactFormData.subject}
+                  onChange={handleContactChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="contact-message">Message</label>
+                <textarea
+                  id="contact-message"
+                  name="message"
+                  placeholder="Your message..."
+                  rows="5"
+                  value={contactFormData.message}
+                  onChange={handleContactChange}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary">Send Message</button>
+            </form>
           </div>
-          <div className="form-group">
-            <label htmlFor="contact-email">Email</label>
-            <input id="contact-email" type="email" placeholder="your@email.com" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="contact-phone">Phone</label>
-            <input id="contact-phone" type="tel" placeholder="(555) 123-4567" />
-          </div>
-          <div className="form-group">
-            <label htmlFor="contact-subject">Subject</label>
-            <input id="contact-subject" type="text" placeholder="What is this about?" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="contact-message">Message</label>
-            <textarea id="contact-message" placeholder="Your message..." rows="5" required />
-          </div>
-          <button type="submit" className="btn btn-primary">Send Message</button>
-        </form>
-      </section>
+        )}
+      </div>
 
       <section className="quick-booking">
         <h2>Quick Booking</h2>
-        <p>Need an appointment? Click below to get started:</p>
-        <button className="btn btn-primary" onClick={onOpenModal}>
-          Book Appointment
-        </button>
+        <p>Need an appointment? Use the Book Now link in the navigation to schedule your service.</p>
       </section>
     </main>
   );
@@ -580,7 +685,7 @@ const FAQTestimoniesPage = () => {
   return (
     <main className="page faq-testimonies-page">
       <div className="page-header">
-        <h1>FAQ & Testimonials</h1>
+        <h2>FAQ & Testimonials</h2>
         <p>Questions? See what our customers have to say.</p>
       </div>
 
@@ -629,75 +734,658 @@ const FAQTestimoniesPage = () => {
   );
 };
 
-// ============= NAVIGATION =============
-const Navigation = ({ currentPage, onPageChange, onOpenModal }) => {
+// ============= BOOK NOW PAGE =============
+const BookNowPage = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    date: '',
+    time: '',
+    service: '',
+    message: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Build mailto link with form data
+    const { name, email, phone, date, time, service, message } = formData;
+    const recipientEmail = CONFIGURATION.contact.email;
+
+    const emailBody = `APPOINTMENT REQUEST
+
+Customer Information:
+- Name: ${name}
+- Email: ${email}
+- Phone: ${phone}
+
+Appointment Details:
+- Preferred Date: ${date}
+- Preferred Time: ${time}
+- Service Type: ${service}
+
+Additional Notes:
+${message || 'None provided'}`;
+
+    const subject = `Appointment Request from ${name} - ${service}`;
+    const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+
+    // Open default email client
+    window.location.href = mailtoLink;
+  };
 
   return (
-    <nav className="navbar">
-      <div className="nav-container">
-        <div className="nav-logo">
-          <span className="logo-icon">⚙️{CONFIGURATION.header.business_name}</span>
-        </div>
-        <ul className="nav-menu">
-          <li>
-            <button
-              className={`nav-link ${currentPage === 'home' ? 'active' : ''}`}
-              onClick={() => onPageChange('home')}
-            >
-              Home
-            </button>
-          </li>
-          <li>
-            <button
-              className={`nav-link ${currentPage === 'contact' ? 'active' : ''}`}
-              onClick={() => onPageChange('contact')}
-            >
-              Contact
-            </button>
-          </li>
-          <li>
-            <button
-              className="nav-link nav-book-btn"
-              onClick={onOpenModal}
-            >
-              Book an Appointment
-            </button>
-          </li>
-        </ul>
+    <main className="page book-now-page">
+      <div className="page-header">
+        <h2>Book an Appointment</h2>
+        <p>Schedule your service with Old Reliable Automotive</p>
       </div>
+
+      <section className="booking-form-section">
+        <form onSubmit={handleSubmit} className="appointment-form booking-form">
+          <div className="form-group">
+            <label htmlFor="name">Name</label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Your full name"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="your@email.com"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="phone">Phone</label>
+            <input
+              id="phone"
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+              placeholder="(555) 123-4567"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="date">Preferred Date</label>
+              <input
+                id="date"
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="time">Preferred Time</label>
+              <input
+                id="time"
+                type="time"
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="service">Service Type</label>
+            <select
+              id="service"
+              name="service"
+              value={formData.service}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a service</option>
+              <option value="oil-change">Oil Change</option>
+              <option value="brake-service">Brake Service</option>
+              <option value="tire-rotation">Tire Rotation</option>
+              <option value="battery">Battery Service</option>
+              <option value="maintenance">General Maintenance</option>
+              <option value="repair">General Repair</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="message">Additional Notes</label>
+            <textarea
+              id="message"
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              placeholder="Tell us about your vehicle or special requests..."
+              rows="4"
+            />
+          </div>
+
+          <button type="submit" className="btn btn-primary btn-lg">
+            Request Appointment
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+};
+
+// ============= ADMIN PAGE =============
+const AdminPage = () => {
+  // Default settings from config.json
+  const defaultSettings = {
+    businessName: CONFIGURATION.header?.business_name || 'Old Reliable Automotive',
+    tagline: CONFIGURATION.header?.tagline || 'Mobile Auto Repair & Maintenance',
+    welcomeMessage: CONFIGURATION.header?.welcome_message || '',
+    quoteMessage: CONFIGURATION.header?.quote_message || '',
+    contact_name: CONFIGURATION.contact?.contact_name || '',
+    phone: CONFIGURATION.contact?.phone || '',
+    email: CONFIGURATION.contact?.email || '',
+    serviceArea: CONFIGURATION.contact?.service_area || 'We provide mobile service throughout the Metro Atlanta area',
+    hoursMonday: CONFIGURATION.footer?.hours?.monday || '8:00 AM - 6:00 PM',
+    hoursTuesday: CONFIGURATION.footer?.hours?.tuesday || '8:00 AM - 6:00 PM',
+    hoursWednesday: CONFIGURATION.footer?.hours?.wednesday || '8:00 AM - 6:00 PM',
+    hoursThursday: CONFIGURATION.footer?.hours?.thursday || '8:00 AM - 6:00 PM',
+    hoursFriday: CONFIGURATION.footer?.hours?.friday || '8:00 AM - 6:00 PM',
+    hoursSaturday: CONFIGURATION.footer?.hours?.saturday || '9:00 AM - 4:00 PM',
+    hoursSunday: CONFIGURATION.footer?.hours?.sunday || 'Closed',
+    instagramUrl: '',
+    disclaimer: CONFIGURATION.footer?.disclaimer || 'Services are performed at the customer\'s location. Please ensure a safe working environment for our technicians.',
+    copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
+  };
+
+  const [settings, setSettings] = useState(defaultSettings);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch settings from API on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && Object.keys(data).length > 0) {
+            setSettings({ ...defaultSettings, ...data });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+        // Fall back to localStorage if API fails
+        const saved = localStorage.getItem('orm_admin_settings');
+        if (saved) {
+          setSettings({ ...defaultSettings, ...JSON.parse(saved) });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setSettings(prev => ({ ...prev, [name]: value }));
+    setSaveStatus(''); // Clear save status when editing
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaveStatus('Saving...');
+
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+
+      if (response.ok) {
+        // Also save to localStorage as backup
+        localStorage.setItem('orm_admin_settings', JSON.stringify(settings));
+        setSaveStatus('Settings saved successfully!');
+        setTimeout(() => setSaveStatus(''), 3000);
+      } else {
+        const data = await response.json();
+        setSaveStatus(`Error: ${data.error || 'Failed to save settings'}`);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      // Fall back to localStorage only
+      localStorage.setItem('orm_admin_settings', JSON.stringify(settings));
+      setSaveStatus('Saved locally (server unavailable)');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+  const handleExport = () => {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'orm_settings.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          setSettings(imported);
+          localStorage.setItem('orm_admin_settings', JSON.stringify(imported));
+          setSaveStatus('Settings imported successfully!');
+        } catch {
+          setSaveStatus('Error importing file. Please check the format.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleReset = async () => {
+    if (window.confirm('Are you sure you want to reset all settings to defaults?')) {
+      try {
+        // Save defaults to API
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(defaultSettings),
+        });
+        localStorage.removeItem('orm_admin_settings');
+        setSettings(defaultSettings);
+        setSaveStatus('Settings reset to defaults.');
+        setTimeout(() => setSaveStatus(''), 3000);
+      } catch (error) {
+        localStorage.removeItem('orm_admin_settings');
+        setSettings(defaultSettings);
+        setSaveStatus('Reset locally (server unavailable)');
+        setTimeout(() => setSaveStatus(''), 3000);
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <main className="page admin-page">
+        <div className="page-header">
+          <h2>Admin Settings</h2>
+          <p>Loading settings...</p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="page admin-page">
+      <div className="page-header">
+        <h2>Admin Settings</h2>
+        <p>Manage your website configuration</p>
+      </div>
+
+      <div className="admin-notice">
+        <p><strong>Note:</strong> Settings are stored in Upstash Redis and sync across all devices. Changes take effect immediately.</p>
+      </div>
+
+      <form onSubmit={handleSave} className="admin-form appointment-form">
+        <section className="admin-section">
+          <h3>Business Information</h3>
+          <div className="form-group">
+            <label htmlFor="businessName">Business Name</label>
+            <input
+              id="businessName"
+              name="businessName"
+              type="text"
+              value={settings.businessName}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="tagline">Tagline</label>
+            <input
+              id="tagline"
+              name="tagline"
+              type="text"
+              value={settings.tagline}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="welcomeMessage">Welcome Message</label>
+            <textarea
+              id="welcomeMessage"
+              name="welcomeMessage"
+              value={settings.welcomeMessage}
+              onChange={handleChange}
+              rows="3"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="quoteMessage">Quote Message</label>
+            <input
+              id="quoteMessage"
+              name="quoteMessage"
+              type="text"
+              value={settings.quoteMessage}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="serviceArea">Service Area Description</label>
+            <input
+              id="serviceArea"
+              name="serviceArea"
+              type="text"
+              value={settings.serviceArea}
+              onChange={handleChange}
+            />
+          </div>
+        </section>
+
+        <section className="admin-section">
+          <h3>Contact Information</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="contact_name">Contact Name</label>
+              <input
+                id="contact_name"
+                name="contact_name"
+                type="text"
+                value={settings.contact_name}
+                onChange={handleChange}
+                placeholder="Enter contact name"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="phone">Phone Number</label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={settings.phone}
+                onChange={handleChange}
+                placeholder="(555) 123-4567"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={settings.email}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="admin-section">
+          <h3>Business Hours</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="hoursMonday">Monday</label>
+              <input
+                id="hoursMonday"
+                name="hoursMonday"
+                type="text"
+                value={settings.hoursMonday}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="hoursTuesday">Tuesday</label>
+              <input
+                id="hoursTuesday"
+                name="hoursTuesday"
+                type="text"
+                value={settings.hoursTuesday}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="hoursWednesday">Wednesday</label>
+              <input
+                id="hoursWednesday"
+                name="hoursWednesday"
+                type="text"
+                value={settings.hoursWednesday}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="hoursThursday">Thursday</label>
+              <input
+                id="hoursThursday"
+                name="hoursThursday"
+                type="text"
+                value={settings.hoursThursday}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="hoursFriday">Friday</label>
+              <input
+                id="hoursFriday"
+                name="hoursFriday"
+                type="text"
+                value={settings.hoursFriday}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="hoursSaturday">Saturday</label>
+              <input
+                id="hoursSaturday"
+                name="hoursSaturday"
+                type="text"
+                value={settings.hoursSaturday}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label htmlFor="hoursSunday">Sunday</label>
+            <input
+              id="hoursSunday"
+              name="hoursSunday"
+              type="text"
+              value={settings.hoursSunday}
+              onChange={handleChange}
+            />
+          </div>
+        </section>
+
+        <section className="admin-section">
+          <h3>Social Media</h3>
+          <div className="form-group">
+            <label htmlFor="instagramUrl">Instagram URL</label>
+            <input
+              id="instagramUrl"
+              name="instagramUrl"
+              type="url"
+              value={settings.instagramUrl}
+              onChange={handleChange}
+              placeholder="https://instagram.com/yourpage"
+            />
+          </div>
+        </section>
+
+        <section className="admin-section">
+          <h3>Footer</h3>
+          <div className="form-group">
+            <label htmlFor="disclaimer">Disclaimer Text</label>
+            <textarea
+              id="disclaimer"
+              name="disclaimer"
+              value={settings.disclaimer}
+              onChange={handleChange}
+              rows="3"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="copyright">Copyright Text</label>
+            <input
+              id="copyright"
+              name="copyright"
+              type="text"
+              value={settings.copyright}
+              onChange={handleChange}
+            />
+          </div>
+        </section>
+
+        {saveStatus && (
+          <div className={`save-status ${saveStatus.includes('Error') ? 'error' : 'success'}`}>
+            {saveStatus}
+          </div>
+        )}
+
+        <div className="admin-actions">
+          <button type="submit" className="btn btn-primary">Save Settings</button>
+          {/*
+          <button type="button" className="btn" onClick={handleExport}>Export to JSON</button>
+          <label className="btn btn-import">
+            Import JSON
+            <input type="file" accept=".json" onChange={handleImport} hidden />
+          </label>
+          <button type="button" className="btn btn-reset" onClick={handleReset}>Reset to Defaults</button>
+          */}
+        </div>
+      </form>
+    </main>
+  );
+};
+
+// ============= NAVIGATION =============
+const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse }) => {
+  const footerConfig = CONFIGURATION.footer;
+  const contactConfig = CONFIGURATION.contact;
+
+  return (
+    <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="nav-logo">
+          <span className="logo-icon">⚙️</span>
+          {!isCollapsed && <span className="logo-text">{CONFIGURATION.header.tagline}</span>}
+        </div>
+        <button className="sidebar-toggle" onClick={onToggleCollapse} aria-label="Toggle sidebar">
+          {isCollapsed ? '»' : '«'}
+        </button>
+      </div>
+      <ul className="nav-menu">
+        <li>
+          <button
+            className={`nav-link ${currentPage === 'home' ? 'active' : ''}`}
+            onClick={() => onPageChange('home')}
+            title="Home"
+          >
+            <span className="nav-icon">🏠</span>
+            {!isCollapsed && <span className="nav-text">Home</span>}
+          </button>
+        </li>
+        <li>
+          <button
+            className={`nav-link ${currentPage === 'contact' ? 'active' : ''}`}
+            onClick={() => onPageChange('contact')}
+            title="Contact"
+          >
+            <span className="nav-icon">📞</span>
+            {!isCollapsed && <span className="nav-text">Contact</span>}
+          </button>
+        </li>
+        <li>
+          <button
+            className={`nav-link ${currentPage === 'faq' ? 'active' : ''}`}
+            onClick={() => onPageChange('faq')}
+            title="FAQ"
+          >
+            <span className="nav-icon">❓</span>
+            {!isCollapsed && <span className="nav-text">FAQ</span>}
+          </button>
+        </li>
+        <li>
+          <button
+            className={`nav-link nav-book-btn ${currentPage === 'book' ? 'active' : ''}`}
+            onClick={() => onPageChange('book')}
+            title="Book an Appointment"
+          >
+            <span className="nav-icon">📅</span>
+            {!isCollapsed && <span className="nav-text">Book Now</span>}
+          </button>
+        </li>
+        <li>
+          <button
+            className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`}
+            onClick={() => onPageChange('admin')}
+            title="Admin Settings"
+          >
+            <span className="nav-icon">⚙️</span>
+            {!isCollapsed && <span className="nav-text">Admin</span>}
+          </button>
+        </li>
+      </ul>
+      {!isCollapsed && (
+        <div className="nav-footer">
+          <ul className="nav-bottom">
+            <li className="nav-bottom-section">
+              <span className="nav-bottom-title">Hours</span>
+              <span>Mon-Fri: {footerConfig.hours.monday}</span>
+              <span>Sat: {footerConfig.hours.saturday}</span>
+              <span>Sun: {footerConfig.hours.sunday}</span>
+            </li>
+            <li className="nav-bottom-section">
+              <span className="nav-bottom-title">Contact</span>
+              <span><a href={`tel:${contactConfig.phone}`}>{contactConfig.phone}</a></span>
+              <span><a href={`mailto:${contactConfig.email}`}>{contactConfig.email}</a></span>
+            </li>
+          </ul>
+        </div>
+      )}
     </nav>
   );
 };
 
 // ============= FOOTER =============
 const Footer = () => {
-  const footerConfig = CONFIGURATION.footer;
-  const contactConfig = CONFIGURATION.contact;
   return (
-    <footer className="footer">
-      <div className="footer-content">
-        <div className="footer-section">
-          <h4>{CONFIGURATION.footer.copyright}</h4>
-          <p>{CONFIGURATION.footer.disclaimer}</p>
-        </div>
-        <div className="footer-section">
-          <h4>Hours</h4>
-          <p>Mon: {footerConfig.hours.monday}<br />
-            Tue: {footerConfig.hours.tuesday}<br />
-            Wed: {footerConfig.hours.wednesday}<br />
-            Thu: {footerConfig.hours.thursday}<br />
-            Fri: {footerConfig.hours.friday}<br />
-            Sat: {footerConfig.hours.saturday}<br />
-            Sun: {footerConfig.hours.sunday}</p>
-        </div>
-        <div className="footer-section">
-          <h4>Contact</h4>
-          <p><a href="tel:{contactConfig.phone}">{contactConfig.phone}</a><br />
-            <a href={`mailto:${contactConfig.email}`}>{contactConfig.email}</a>  </p>
-        </div>
-      </div>
+    <footer >
       <div className="footer-bottom">
-        <p>&copy; 2026 Old Reliable Automotive. All rights reserved.</p>
+        <p>{CONFIGURATION.footer.disclaimer}</p>
+        <p>{CONFIGURATION.footer.copyright}</p>
       </div>
     </footer>
   );
@@ -706,27 +1394,38 @@ const Footer = () => {
 // ============= MAIN APP =============
 export default function ORMWebpage() {
   const [currentPage, setCurrentPage] = useState('home');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage onOpenModal={() => setIsModalOpen(true)} />;
+        return <HomePage />;
       case 'contact':
-        return <ContactPage onOpenModal={() => setIsModalOpen(true)} />;
+        return <ContactPage />;
       case 'faq':
         return <FAQTestimoniesPage />;
+      case 'book':
+        return <BookNowPage />;
+      case 'admin':
+        return <AdminPage />;
       default:
-        return <HomePage onOpenModal={() => setIsModalOpen(true)} />;
+        return <HomePage />;
     }
   };
 
   return (
-    <div className="app">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} onOpenModal={() => setIsModalOpen(true)} />
-      <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      {renderPage()}
-      <Footer />
+    <div className={`app ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <Navigation
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
+      <div className="main-content">
+        <HeroHeader />
+        {renderPage()}
+        <Footer />
+      </div>
     </div>
   );
 }

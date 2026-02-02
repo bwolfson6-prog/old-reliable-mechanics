@@ -7,10 +7,11 @@
     "header": {
         "business_name": "Old Reliable Automotive",
         "tagline": "Mobile Auto Repair & Maintenance",
-        "welcome_message": "Welcome to Old Reliable Automotive, your trusted mobile auto repair and maintenance service in the Metro Atlanta area. We bring quality car care right to your doorstep, ensuring convenience and reliability for all your automotive needs."
+        "welcome_message": "Welcome to Old Reliable Automotive, your trusted mobile auto repair and maintenance service in the Metro Atlanta area. We bring quality car care right to your doorstep, ensuring convenience and reliability for all your automotive needs.",
+        "quote_message": "Take care of your car in the garage, and it will take care of you on the road. - Amit Kalantri"
     },
     "footer": {
-        "copyright": "© 2024 Old Reliable Automotive. All rights reserved.",
+        "copyright": "© 2026 Old Reliable Automotive. All rights reserved.",
         "disclaimer": "Services are performed at the customer's location. Please ensure a safe working environment for our technicians.",
         "hours": {
             "monday": "8:00 AM - 6:00 PM",
@@ -21,12 +22,5 @@
             "saturday": "9:00 AM - 4:00 PM",
             "sunday": "Closed"
         }
-    },
-    "google_calendar_config": {
-        "apiKey": "AIzaSyASFEwXR0QT22-R41ruunuVbSX9W55N-H8",
-        "clientId": "1063661148403-jv2cfnesdfv8asijmrl5ls3gsptncnkg.apps.googleusercontent.com",
-        "calendarId": "bwolfson6@gmail.com",
-        "scope": "https://www.googleapis.com/auth/calendar.readonly",
-        "discoveryDocs": ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]
     }
 }
