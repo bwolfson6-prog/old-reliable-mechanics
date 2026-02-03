@@ -1,8 +1,24 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend lazily to prevent build-time errors when env var is missing
+let resend = null;
+const getResend = () => {
+  if (!resend && process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+};
 
 export async function POST(request) {
+  const resendClient = getResend();
+
+  if (!resendClient) {
+    return Response.json(
+      { error: 'Email service not configured' },
+      { status: 503 }
+    );
+  }
+
   try {
     const { name, email, message } = await request.json();
 
@@ -13,7 +29,7 @@ export async function POST(request) {
       );
     }
 
-    await resend.emails.send({
+    await resendClient.emails.send({
       from: 'Contact Form <onboarding@resend.dev>',
       to: 'oldreliableautomotive@gmail.com',
       subject: `New message from ${name}`,
