@@ -8,7 +8,8 @@
         "business_name": "Old Reliable Automotive",
         "tagline": "Mobile Auto Repair & Maintenance",
         "welcome_message": "Welcome to Old Reliable Automotive, your trusted mobile auto repair and maintenance service in the Metro Atlanta area. We bring quality car care right to your doorstep, ensuring convenience and reliability for all your automotive needs.",
-        "quote_message": "Take care of your car in the garage, and it will take care of you on the road. - Amit Kalantri"
+        "quote_message": "Take care of your car in the garage, and it will take care of you on the road. - Amit Kalantri",
+        "homepage_url" : "https://old-reliable-mechanics-bvhe.vercel.app/"
     },
     "footer": {
         "copyright": "© 2026 Old Reliable Automotive. All rights reserved.",

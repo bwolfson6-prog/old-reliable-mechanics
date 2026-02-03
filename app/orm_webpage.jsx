@@ -19,6 +19,7 @@ const GoogleCalendar = ({ onSelectSlot }) => {
   const [error, setError] = useState(null);
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [gapi, setGapi] = useState(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // For mobile view
 
   useEffect(() => {
     const loadGapi = async () => {
@@ -136,13 +137,58 @@ const GoogleCalendar = ({ onSelectSlot }) => {
     return <div className="calendar-error"><p>{error}</p><button className="btn" onClick={fetchEvents}>Try Again</button></div>;
   }
 
+  const formatDayShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
+  const selectedDay = days[selectedDayIndex];
+  const selectedDaySlots = timeSlots.filter((s) => s.dayIndex === selectedDayIndex);
+
   return (
     <div className="google-calendar">
       <div className="calendar-nav">
-        <button className="btn" onClick={() => navigateWeek(-1)}>← Previous</button>
-        <h3>{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
-        <button className="btn" onClick={() => navigateWeek(1)}>Next →</button>
+        <button className="btn calendarBtn" onClick={() => navigateWeek(-1)}>← Previous</button>
+        <h3 className="calendar-nav-title">{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
+        <button className="btn calendarBtn" onClick={() => navigateWeek(1)}>Next →</button>
       </div>
+
+      {/* Mobile Day Tabs */}
+      <div className="calendar-day-tabs">
+        {days.map((day, index) => (
+          <button
+            key={day}
+            className={`day-tab ${selectedDayIndex === index ? 'active' : ''}`}
+            onClick={() => setSelectedDayIndex(index)}
+          >
+            <span className="day-tab-name">{formatDayShort(new Date(day))}</span>
+            <span className="day-tab-date">{new Date(day).getDate()}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile Single Day View */}
+      <div className="calendar-mobile">
+        <div className="calendar-mobile-header">
+          {formatDate(new Date(selectedDay))}
+        </div>
+        <div className="calendar-mobile-slots">
+          {selectedDaySlots.map((slot) => {
+            const isUnavailable = selectedDayIndex === 5 && slot.hour >= 14;
+            if (isUnavailable) return null;
+            return (
+              <div
+                key={`mobile-${slot.hour}`}
+                className={`calendar-mobile-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
+                onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
+              >
+                <span className="mobile-slot-time">{formatTime(slot.hour)}</span>
+                <span className="mobile-slot-status">
+                  {slot.isBooked ? 'Booked' : slot.isPast ? 'Unavailable' : 'Available'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop Grid View */}
       <div className="calendar-grid">
         <div className="calendar-header">
           <div className="calendar-time-header">Time</div>
@@ -333,7 +379,9 @@ const AppointmentModal = ({ isOpen, onClose }) => {
 const HeroHeader = () => {
   return (
     <section className="hero">
+
       <div className="hero-content">
+
         <div className="hero-logo-container">
           <img src="\grok_image_1769728748882-removebg-preview.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
         </div>
@@ -894,64 +942,89 @@ ${message || 'None provided'}`;
   );
 };
 
+// ============= DEFAULT SETTINGS =============
+const getDefaultSettings = () => ({
+  businessName: CONFIGURATION.header?.business_name || 'Old Reliable Automotive',
+  tagline: CONFIGURATION.header?.tagline || 'Mobile Auto Repair & Maintenance',
+  welcomeMessage: CONFIGURATION.header?.welcome_message || '',
+  quoteMessage: CONFIGURATION.header?.quote_message || '',
+  contact_name: CONFIGURATION.contact?.contact_name || '',
+  phone: CONFIGURATION.contact?.phone || '',
+  email: CONFIGURATION.contact?.email || '',
+  serviceArea: CONFIGURATION.contact?.service_area || 'We provide mobile service throughout the Metro Atlanta area',
+  showBusinessHours: true,
+  hoursMonday: CONFIGURATION.footer?.hours?.monday || '8:00 AM - 6:00 PM',
+  hoursTuesday: CONFIGURATION.footer?.hours?.tuesday || '8:00 AM - 6:00 PM',
+  hoursWednesday: CONFIGURATION.footer?.hours?.wednesday || '8:00 AM - 6:00 PM',
+  hoursThursday: CONFIGURATION.footer?.hours?.thursday || '8:00 AM - 6:00 PM',
+  hoursFriday: CONFIGURATION.footer?.hours?.friday || '8:00 AM - 6:00 PM',
+  hoursSaturday: CONFIGURATION.footer?.hours?.saturday || '9:00 AM - 4:00 PM',
+  hoursSunday: CONFIGURATION.footer?.hours?.sunday || 'Closed',
+  instagramUrl: '',
+  disclaimer: CONFIGURATION.footer?.disclaimer || 'Services are performed at the customer\'s location. Please ensure a safe working environment for our technicians.',
+  copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
+});
+
 // ============= ADMIN PAGE =============
-const AdminPage = () => {
-  // Default settings from config.json
-  const defaultSettings = {
-    businessName: CONFIGURATION.header?.business_name || 'Old Reliable Automotive',
-    tagline: CONFIGURATION.header?.tagline || 'Mobile Auto Repair & Maintenance',
-    welcomeMessage: CONFIGURATION.header?.welcome_message || '',
-    quoteMessage: CONFIGURATION.header?.quote_message || '',
-    contact_name: CONFIGURATION.contact?.contact_name || '',
-    phone: CONFIGURATION.contact?.phone || '',
-    email: CONFIGURATION.contact?.email || '',
-    serviceArea: CONFIGURATION.contact?.service_area || 'We provide mobile service throughout the Metro Atlanta area',
-    hoursMonday: CONFIGURATION.footer?.hours?.monday || '8:00 AM - 6:00 PM',
-    hoursTuesday: CONFIGURATION.footer?.hours?.tuesday || '8:00 AM - 6:00 PM',
-    hoursWednesday: CONFIGURATION.footer?.hours?.wednesday || '8:00 AM - 6:00 PM',
-    hoursThursday: CONFIGURATION.footer?.hours?.thursday || '8:00 AM - 6:00 PM',
-    hoursFriday: CONFIGURATION.footer?.hours?.friday || '8:00 AM - 6:00 PM',
-    hoursSaturday: CONFIGURATION.footer?.hours?.saturday || '9:00 AM - 4:00 PM',
-    hoursSunday: CONFIGURATION.footer?.hours?.sunday || 'Closed',
-    instagramUrl: '',
-    disclaimer: CONFIGURATION.footer?.disclaimer || 'Services are performed at the customer\'s location. Please ensure a safe working environment for our technicians.',
-    copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
+const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading, isAuthenticated, setIsAuthenticated }) => {
+  const defaultSettings = getDefaultSettings();
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const [activeTab, setActiveTab] = useState('settings');
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  // Fetch analytics when tab changes to analytics
+  useEffect(() => {
+    if (activeTab === 'analytics' && isAuthenticated) {
+      setAnalyticsLoading(true);
+      fetch('/api/analytics')
+        .then(res => res.json())
+        .then(data => setAnalytics(data))
+        .catch(err => console.error('Failed to fetch analytics:', err))
+        .finally(() => setAnalyticsLoading(false));
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginLoading(true);
+
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('orm_admin_auth', 'true');
+      } else {
+        setLoginError(data.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      setLoginError('Login failed. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
-  const [settings, setSettings] = useState(defaultSettings);
-  const [saveStatus, setSaveStatus] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch settings from API on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch('/api/settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data && Object.keys(data).length > 0) {
-            setSettings({ ...defaultSettings, ...data });
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch settings:', error);
-        // Fall back to localStorage if API fails
-        const saved = localStorage.getItem('orm_admin_settings');
-        if (saved) {
-          setSettings({ ...defaultSettings, ...JSON.parse(saved) });
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSettings();
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
     setSaveStatus(''); // Clear save status when editing
+  };
+
+  const handleToggle = (name) => {
+    setSettings(prev => ({ ...prev, [name]: !prev[name] }));
+    setSaveStatus('');
   };
 
   const handleSave = async (e) => {
@@ -1045,238 +1118,381 @@ const AdminPage = () => {
     );
   }
 
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <main className="page admin-page">
+        <div className="page-header">
+          <h2>Admin Login</h2>
+          <p>Please sign in to access admin settings</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="admin-form appointment-form admin-login-form">
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              value={credentials.username}
+              onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+              required
+              autoComplete="username"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={credentials.password}
+              onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+          {loginError && (
+            <div className="save-status error">{loginError}</div>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={loginLoading}>
+            {loginLoading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      </main>
+    );
+  }
+
+  // Analytics display component
+  const renderAnalytics = () => {
+    if (analyticsLoading) {
+      return <p>Loading analytics...</p>;
+    }
+
+    if (!analytics || !analytics.pages || Object.keys(analytics.pages).length === 0) {
+      return (
+        <div className="admin-notice">
+          <p>No analytics data yet. Page visits will be tracked as users browse the site.</p>
+        </div>
+      );
+    }
+
+    const pageNames = {
+      home: 'Home',
+      contact: 'Contact',
+      faq: 'FAQ & Testimonials',
+      book: 'Book Now'
+    };
+
+    return (
+      <div className="analytics-content">
+        <div className="analytics-summary">
+          <div className="analytics-card">
+            <span className="analytics-number">{analytics.totalVisits || 0}</span>
+            <span className="analytics-label">Total Page Views</span>
+          </div>
+        </div>
+
+        <section className="admin-section">
+          <h3>Page Views</h3>
+          <table className="analytics-table">
+            <thead>
+              <tr>
+                <th>Page</th>
+                <th>Total Views</th>
+                <th>Today</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(analytics.pages).map(([page, data]) => {
+                const today = new Date().toISOString().split('T')[0];
+                const todayViews = data.daily?.[today] || 0;
+                return (
+                  <tr key={page}>
+                    <td>{pageNames[page] || page}</td>
+                    <td>{data.total || 0}</td>
+                    <td>{todayViews}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    );
+  };
+
   return (
     <main className="page admin-page">
       <div className="page-header">
-        <h2>Admin Settings</h2>
-        <p>Manage your website configuration</p>
+        <h2>Admin Dashboard</h2>
+        <p>Manage your website configuration and view analytics</p>
+
       </div>
 
-      <div className="admin-notice">
-        <p><strong>Note:</strong> Settings are stored in Upstash Redis and sync across all devices. Changes take effect immediately.</p>
+      <div className="admin-tabs">
+        <button
+          className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          Site Settings
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Site Analytics
+        </button>
       </div>
 
-      <form onSubmit={handleSave} className="admin-form appointment-form">
-        <section className="admin-section">
-          <h3>Business Information</h3>
-          <div className="form-group">
-            <label htmlFor="businessName">Business Name</label>
-            <input
-              id="businessName"
-              name="businessName"
-              type="text"
-              value={settings.businessName}
-              onChange={handleChange}
-            />
+      {activeTab === 'analytics' ? (
+        renderAnalytics()
+      ) : (
+        <>
+          <div className="admin-notice">
+            <p><strong>Note:</strong> Settings are stored in Upstash Redis and sync across all devices. Changes take effect immediately.</p>
           </div>
-          <div className="form-group">
-            <label htmlFor="tagline">Tagline</label>
-            <input
-              id="tagline"
-              name="tagline"
-              type="text"
-              value={settings.tagline}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="welcomeMessage">Welcome Message</label>
-            <textarea
-              id="welcomeMessage"
-              name="welcomeMessage"
-              value={settings.welcomeMessage}
-              onChange={handleChange}
-              rows="3"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="quoteMessage">Quote Message</label>
-            <input
-              id="quoteMessage"
-              name="quoteMessage"
-              type="text"
-              value={settings.quoteMessage}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="serviceArea">Service Area Description</label>
-            <input
-              id="serviceArea"
-              name="serviceArea"
-              type="text"
-              value={settings.serviceArea}
-              onChange={handleChange}
-            />
-          </div>
-        </section>
 
-        <section className="admin-section">
-          <h3>Contact Information</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="contact_name">Contact Name</label>
-              <input
-                id="contact_name"
-                name="contact_name"
-                type="text"
-                value={settings.contact_name}
-                onChange={handleChange}
-                placeholder="Enter contact name"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="phone">Phone Number</label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={settings.phone}
-                onChange={handleChange}
-                placeholder="(555) 123-4567"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="email">Email Address</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={settings.email}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-        </section>
+          <form onSubmit={handleSave} className="admin-form appointment-form">
+            <section className="admin-section">
+              <h3>Business Information</h3>
+              <div className="form-group">
+                <label htmlFor="businessName">Business Name</label>
+                <input
+                  id="businessName"
+                  name="businessName"
+                  type="text"
+                  value={settings.businessName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="tagline">Tagline</label>
+                <input
+                  id="tagline"
+                  name="tagline"
+                  type="text"
+                  value={settings.tagline}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="welcomeMessage">Welcome Message</label>
+                <textarea
+                  id="welcomeMessage"
+                  name="welcomeMessage"
+                  value={settings.welcomeMessage}
+                  onChange={handleChange}
+                  rows="3"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="quoteMessage">Quote Message</label>
+                <input
+                  id="quoteMessage"
+                  name="quoteMessage"
+                  type="text"
+                  value={settings.quoteMessage}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="serviceArea">Service Area Description</label>
+                <input
+                  id="serviceArea"
+                  name="serviceArea"
+                  type="text"
+                  value={settings.serviceArea}
+                  onChange={handleChange}
+                />
+              </div>
+            </section>
 
-        <section className="admin-section">
-          <h3>Business Hours</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hoursMonday">Monday</label>
-              <input
-                id="hoursMonday"
-                name="hoursMonday"
-                type="text"
-                value={settings.hoursMonday}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="hoursTuesday">Tuesday</label>
-              <input
-                id="hoursTuesday"
-                name="hoursTuesday"
-                type="text"
-                value={settings.hoursTuesday}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hoursWednesday">Wednesday</label>
-              <input
-                id="hoursWednesday"
-                name="hoursWednesday"
-                type="text"
-                value={settings.hoursWednesday}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="hoursThursday">Thursday</label>
-              <input
-                id="hoursThursday"
-                name="hoursThursday"
-                type="text"
-                value={settings.hoursThursday}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hoursFriday">Friday</label>
-              <input
-                id="hoursFriday"
-                name="hoursFriday"
-                type="text"
-                value={settings.hoursFriday}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="hoursSaturday">Saturday</label>
-              <input
-                id="hoursSaturday"
-                name="hoursSaturday"
-                type="text"
-                value={settings.hoursSaturday}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="hoursSunday">Sunday</label>
-            <input
-              id="hoursSunday"
-              name="hoursSunday"
-              type="text"
-              value={settings.hoursSunday}
-              onChange={handleChange}
-            />
-          </div>
-        </section>
+            <section className="admin-section">
+              <h3>Contact Information</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="contact_name">Contact Name</label>
+                  <input
+                    id="contact_name"
+                    name="contact_name"
+                    type="text"
+                    value={settings.contact_name}
+                    onChange={handleChange}
+                    placeholder="Enter contact name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Phone Number</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={settings.phone}
+                    onChange={handleChange}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email Address</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={settings.email}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </section>
 
-        <section className="admin-section">
-          <h3>Social Media</h3>
-          <div className="form-group">
-            <label htmlFor="instagramUrl">Instagram URL</label>
-            <input
-              id="instagramUrl"
-              name="instagramUrl"
-              type="url"
-              value={settings.instagramUrl}
-              onChange={handleChange}
-              placeholder="https://instagram.com/yourpage"
-            />
-          </div>
-        </section>
+            <section className="admin-section">
+              <h3>Business Hours</h3>
+              <div className="toggle-container">
+                <span className="toggle-label">Show Business Hours</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggle('showBusinessHours')}
+                  className={`toggle-switch ${settings.showBusinessHours ? 'active' : ''}`}
+                  aria-pressed={settings.showBusinessHours}
+                >
+                  <span className="toggle-slider" />
+                </button>
+                <span className="toggle-status">{settings.showBusinessHours ? 'On' : 'Off'}</span>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="hoursMonday">Monday</label>
+                  <input
+                    id="hoursMonday"
+                    name="hoursMonday"
+                    type="text"
+                    value={settings.hoursMonday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="hoursTuesday">Tuesday</label>
+                  <input
+                    id="hoursTuesday"
+                    name="hoursTuesday"
+                    type="text"
+                    value={settings.hoursTuesday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="hoursWednesday">Wednesday</label>
+                  <input
+                    id="hoursWednesday"
+                    name="hoursWednesday"
+                    type="text"
+                    value={settings.hoursWednesday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="hoursThursday">Thursday</label>
+                  <input
+                    id="hoursThursday"
+                    name="hoursThursday"
+                    type="text"
+                    value={settings.hoursThursday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="hoursFriday">Friday</label>
+                  <input
+                    id="hoursFriday"
+                    name="hoursFriday"
+                    type="text"
+                    value={settings.hoursFriday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="hoursSaturday">Saturday</label>
+                  <input
+                    id="hoursSaturday"
+                    name="hoursSaturday"
+                    type="text"
+                    value={settings.hoursSaturday}
+                    onChange={handleChange}
+                    readOnly={!settings.showBusinessHours}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="hoursSunday">Sunday</label>
+                <input
+                  id="hoursSunday"
+                  name="hoursSunday"
+                  type="text"
+                  value={settings.hoursSunday}
+                  onChange={handleChange}
+                  readOnly={!settings.showBusinessHours}
+                />
+              </div>
+            </section>
 
-        <section className="admin-section">
-          <h3>Footer</h3>
-          <div className="form-group">
-            <label htmlFor="disclaimer">Disclaimer Text</label>
-            <textarea
-              id="disclaimer"
-              name="disclaimer"
-              value={settings.disclaimer}
-              onChange={handleChange}
-              rows="3"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="copyright">Copyright Text</label>
-            <input
-              id="copyright"
-              name="copyright"
-              type="text"
-              value={settings.copyright}
-              onChange={handleChange}
-            />
-          </div>
-        </section>
+            <section className="admin-section">
+              <h3>Social Media</h3>
+              <div className="form-group">
+                <label htmlFor="instagramUrl">Instagram URL</label>
+                <input
+                  id="instagramUrl"
+                  name="instagramUrl"
+                  type="url"
+                  value={settings.instagramUrl}
+                  onChange={handleChange}
+                  placeholder="https://instagram.com/yourpage"
+                />
+              </div>
+            </section>
 
-        {saveStatus && (
-          <div className={`save-status ${saveStatus.includes('Error') ? 'error' : 'success'}`}>
-            {saveStatus}
-          </div>
-        )}
+            <section className="admin-section">
+              <h3>Footer</h3>
+              <div className="form-group">
+                <label htmlFor="disclaimer">Disclaimer Text</label>
+                <textarea
+                  id="disclaimer"
+                  name="disclaimer"
+                  value={settings.disclaimer}
+                  onChange={handleChange}
+                  rows="3"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="copyright">Copyright Text</label>
+                <input
+                  id="copyright"
+                  name="copyright"
+                  type="text"
+                  value={settings.copyright}
+                  onChange={handleChange}
+                />
+              </div>
+            </section>
 
-        <div className="admin-actions">
-          <button type="submit" className="btn btn-primary">Save Settings</button>
-          {/*
+            {saveStatus && (
+              <div className={`save-status ${saveStatus.includes('Error') ? 'error' : 'success'}`}>
+                {saveStatus}
+              </div>
+            )}
+
+            <div className="admin-actions">
+              <button type="submit" className="btn btn-primary">Save Settings</button>
+              {/*
           <button type="button" className="btn" onClick={handleExport}>Export to JSON</button>
           <label className="btn btn-import">
             Import JSON
@@ -1284,16 +1500,20 @@ const AdminPage = () => {
           </label>
           <button type="button" className="btn btn-reset" onClick={handleReset}>Reset to Defaults</button>
           */}
-        </div>
-      </form>
+            </div>
+          </form>
+        </>
+      )}
     </main>
   );
 };
 
 // ============= NAVIGATION =============
-const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse }) => {
+const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse, settings, adminModeEnabled, isAuthenticated, onLogout }) => {
   const footerConfig = CONFIGURATION.footer;
   const contactConfig = CONFIGURATION.contact;
+  const showBusinessHours = settings?.showBusinessHours !== false;
+  const [showInfoPopover, setShowInfoPopover] = useState(false);
 
   return (
     <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -1347,31 +1567,77 @@ const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse }
             {!isCollapsed && <span className="nav-text">Book Now</span>}
           </button>
         </li>
-        <li>
-          <button
-            className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`}
-            onClick={() => onPageChange('admin')}
-            title="Admin Settings"
-          >
-            <span className="nav-icon">⚙️</span>
-            {!isCollapsed && <span className="nav-text">Admin</span>}
-          </button>
-        </li>
+        {adminModeEnabled && (
+          <li>
+            <button
+              className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`}
+              onClick={() => onPageChange('admin')}
+              title="Admin Settings"
+            >
+              <span className="nav-icon">⚙️</span>
+              {!isCollapsed && <span className="nav-text">Admin</span>}
+            </button>
+          </li>
+        )}
       </ul>
+
+      {/* Mobile Info Button - only visible on mobile */}
+      <div className="mobile-info-container">
+        <button
+          className="mobile-info-btn"
+          onClick={() => setShowInfoPopover(!showInfoPopover)}
+          aria-label="Show hours and contact info"
+          title="Hours & Contact"
+        >
+          <span className="nav-icon">🕐</span>
+        </button>
+        {showInfoPopover && (
+          <div className="mobile-info-popover">
+            <button
+              className="popover-close"
+              onClick={() => setShowInfoPopover(false)}
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            {showBusinessHours && (
+              <div className="popover-section">
+                <span className="popover-title">Hours</span>
+                <span>Mon-Fri: {settings?.hoursMonday || footerConfig.hours.monday}</span>
+                <span>Sat: {settings?.hoursSaturday || footerConfig.hours.saturday}</span>
+                <span>Sun: {settings?.hoursSunday || footerConfig.hours.sunday}</span>
+              </div>
+            )}
+            <div className="popover-section">
+              <span className="popover-title">Contact</span>
+              <span><a href={`tel:${contactConfig.phone}`}>{contactConfig.phone}</a></span>
+              <span><a href={`mailto:${contactConfig.email}`}>{contactConfig.email}</a></span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {!isCollapsed && (
         <div className="nav-footer">
           <ul className="nav-bottom">
-            <li className="nav-bottom-section">
-              <span className="nav-bottom-title">Hours</span>
-              <span>Mon-Fri: {footerConfig.hours.monday}</span>
-              <span>Sat: {footerConfig.hours.saturday}</span>
-              <span>Sun: {footerConfig.hours.sunday}</span>
-            </li>
+            {showBusinessHours && (
+              <li className="nav-bottom-section">
+                <span className="nav-bottom-title">Hours</span>
+                <span>Mon-Fri: {settings?.hoursMonday || footerConfig.hours.monday}</span>
+                <span>Sat: {settings?.hoursSaturday || footerConfig.hours.saturday}</span>
+                <span>Sun: {settings?.hoursSunday || footerConfig.hours.sunday}</span>
+              </li>
+            )}
             <li className="nav-bottom-section">
               <span className="nav-bottom-title">Contact</span>
               <span><a href={`tel:${contactConfig.phone}`}>{contactConfig.phone}</a></span>
               <span><a href={`mailto:${contactConfig.email}`}>{contactConfig.email}</a></span>
             </li>
+            {adminModeEnabled && isAuthenticated && (
+              <li>
+                <button onClick={onLogout} className="btn btn-logout">Logout</button>
+              </li>
+            )}
           </ul>
         </div>
       )}
@@ -1395,6 +1661,87 @@ const Footer = () => {
 export default function ORMWebpage() {
   const [currentPage, setCurrentPage] = useState('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [adminModeEnabled, setAdminModeEnabled] = useState(false);
+
+  // Lifted settings state for sharing between AdminPage and Navigation
+  const [settings, setSettings] = useState(getDefaultSettings());
+  const [saveStatus, setSaveStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Lifted auth state for sharing between AdminPage and Navigation
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('orm_admin_auth') === 'true';
+    }
+    return false;
+  });
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('orm_admin_auth');
+    //setCurrentPage('home');
+    const hostname = window.location.hostname;
+    console.log('Hostname on logout:', hostname);
+    const cleanURL = window.location.origin + window.location.pathname;
+    if (hostname.indexOf("localhost") !== -1) {
+      window.location.replace(cleanURL);
+    }
+    else {
+      window.location.replace(CONFIGURATION.header.homepage_url);
+    }
+
+  };
+
+  // Check for admin_mode_enabled URL param on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('admin_mode_enabled')) {
+      setAdminModeEnabled(true);
+      setCurrentPage('admin');
+      // Store in session so it persists during navigation
+      sessionStorage.setItem('orm_admin_mode', 'true');
+    } else if (sessionStorage.getItem('orm_admin_mode') === 'true') {
+      setAdminModeEnabled(true);
+    }
+  }, []);
+
+  // Track page visits (except admin page)
+  useEffect(() => {
+    if (currentPage && currentPage !== 'admin') {
+      fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: currentPage }),
+      }).catch(err => console.error('Analytics error:', err));
+    }
+  }, [currentPage]);
+
+  // Fetch settings from API on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const defaultSettings = getDefaultSettings();
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && Object.keys(data).length > 0) {
+            setSettings({ ...defaultSettings, ...data });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+        // Fall back to localStorage if API fails
+        const saved = localStorage.getItem('orm_admin_settings');
+        if (saved) {
+          setSettings({ ...defaultSettings, ...JSON.parse(saved) });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -1407,7 +1754,7 @@ export default function ORMWebpage() {
       case 'book':
         return <BookNowPage />;
       case 'admin':
-        return <AdminPage />;
+        return <AdminPage settings={settings} setSettings={setSettings} saveStatus={saveStatus} setSaveStatus={setSaveStatus} isLoading={isLoading} isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />;
       default:
         return <HomePage />;
     }
@@ -1420,6 +1767,10 @@ export default function ORMWebpage() {
         onPageChange={setCurrentPage}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        settings={settings}
+        adminModeEnabled={adminModeEnabled}
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
       />
       <div className="main-content">
         <HeroHeader />
