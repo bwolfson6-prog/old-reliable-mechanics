@@ -748,7 +748,7 @@ const FAQTestimoniesPage = () => {
                   <span key={i} className="star">⭐</span>
                 ))}
               </div>
-              <p className="testimonial-text">"{testimonial.text}"</p>
+              <p className="testimonial-text">&ldquo;{testimonial.text}&rdquo;</p>
               <p className="testimonial-author">— {testimonial.name}</p>
             </div>
           ))}
