@@ -1266,11 +1266,15 @@ a:hover {
 }
 
 .booking-form-section {
-  margin-left: auto;
-  margin-right: auto;
+      margin-left: auto;
+    margin-right: auto;
 }
 
-
+.booking-container{
+  display: grid;
+    grid-template-columns: 25% 75%;
+    gap: var(--spacing-md);
+}
 .appointment-form {
   background: var(--cream);
   padding: var(--spacing-lg);
@@ -1291,12 +1295,14 @@ a:hover {
 
 .form-group {
   margin-bottom: var(--spacing-md);
+  max-width: 500px;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-md);
+  max-width: 50%;
 }
 
 .form-group label {
@@ -1854,9 +1860,7 @@ a:hover {
 }
 
 /* ============= ADMIN PAGE ============= */
-.admin-page {
-  max-width: 800px;
-}
+
 
 .admin-notice {
   background: var(--light-gold);
@@ -2078,12 +2082,15 @@ select:disabled {
   background: var(--light-gray);
   border-radius: 8px;
   text-align: center;
+  max-width: 500px;
+      height: 200px;
 }
 
 .logo-preview p {
   margin-bottom: var(--spacing-sm);
   font-weight: 600;
   color: var(--text-light);
+  max-width: 500px;
 }
 
 .logo-preview img {

@@ -12,220 +12,7 @@ const GOOGLE_CALENDAR_CONFIG = {
   scope: process.env.NEXT_PUBLIC_GOOGLE_SCOPE || CONFIGURATION.google_calendar_config?.scope || 'https://www.googleapis.com/auth/calendar.readonly',
   discoveryDocs: CONFIGURATION.google_calendar_config?.discoveryDocs || ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
 };
-// ============= GOOGLE CALENDAR COMPONENT =============
-const GoogleCalendar = ({ onSelectSlot }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [events, setEvents] = useState([]);
-  const [error, setError] = useState(null);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [gapi, setGapi] = useState(null);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // For mobile view
 
-  useEffect(() => {
-    const loadGapi = async () => {
-      try {
-        const gapiModule = await import('gapi-script');
-        const gapiClient = gapiModule.gapi;
-
-        gapiClient.load('client:auth2', () => {
-          gapiClient.client
-            .init({
-              apiKey: GOOGLE_CALENDAR_CONFIG.apiKey,
-              clientId: GOOGLE_CALENDAR_CONFIG.clientId,
-              scope: GOOGLE_CALENDAR_CONFIG.scope,
-              discoveryDocs: GOOGLE_CALENDAR_CONFIG.discoveryDocs,
-            })
-            .then(() => {
-              setGapi(gapiClient);
-              setIsLoading(false);
-            })
-            .catch(() => {
-              setError('Failed to initialize Google Calendar');
-              setIsLoading(false);
-            });
-        });
-      } catch {
-        setError('Failed to load Google Calendar');
-        setIsLoading(false);
-      }
-    };
-
-    loadGapi();
-  }, []);
-
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  const fetchEvents = async () => {
-    if (!gapi) return;
-    try {
-      setIsLoading(true);
-      const startOfWeek = getStartOfWeek(currentWeek);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(endOfWeek.getDate() + 7);
-
-      const response = await gapi.client.calendar.events.list({
-        calendarId: GOOGLE_CALENDAR_CONFIG.calendarId,
-        timeMin: startOfWeek.toISOString(),
-        timeMax: endOfWeek.toISOString(),
-        showDeleted: false,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-      const items = response.result.items || [];
-      console.log('Fetched events:', items);
-      setEvents(items);
-      setError(null);
-    } catch (err) {
-      console.error('Calendar API Error:', err);
-      const errorMsg = err?.result?.error?.message || 'Unable to load calendar.';
-      setError(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (gapi) fetchEvents();
-  }, [currentWeek, gapi]);
-
-  const navigateWeek = (direction) => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(newDate.getDate() + direction * 7);
-    setCurrentWeek(newDate);
-  };
-
-  const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  const formatTime = (hour) => `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
-
-  const generateTimeSlots = () => {
-    const slots = [];
-    const startOfWeek = getStartOfWeek(currentWeek);
-    for (let day = 0; day < 6; day++) {
-      const date = new Date(startOfWeek);
-      date.setDate(date.getDate() + day);
-      const endHour = day === 5 ? 14 : 18;
-      for (let hour = 8; hour < endHour; hour++) {
-        const slotTime = new Date(date);
-        slotTime.setHours(hour, 0, 0, 0);
-        const isBooked = events.some((event) => {
-          const eventStart = new Date(event.start.dateTime || event.start.date);
-          const eventEnd = new Date(event.end.dateTime || event.end.date);
-          return slotTime >= eventStart && slotTime < eventEnd;
-        });
-        const isPast = slotTime < new Date();
-        slots.push({ date: new Date(date), time: slotTime, hour, isBooked, isPast, dayIndex: day });
-      }
-    }
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-  const days = [...new Set(timeSlots.map((s) => s.date.toDateString()))];
-
-  if (isLoading && events.length === 0) {
-    return <div className="calendar-loading"><p>Loading calendar...</p></div>;
-  }
-
-  if (error) {
-    return <div className="calendar-error"><p>{error}</p><button className="btn" onClick={fetchEvents}>Try Again</button></div>;
-  }
-
-  const formatDayShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
-  const selectedDay = days[selectedDayIndex];
-  const selectedDaySlots = timeSlots.filter((s) => s.dayIndex === selectedDayIndex);
-
-  return (
-    <div className="google-calendar">
-      <div className="calendar-nav">
-        <button className="btn calendarBtn" onClick={() => navigateWeek(-1)}>← Previous</button>
-        <h3 className="calendar-nav-title">{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
-        <button className="btn calendarBtn" onClick={() => navigateWeek(1)}>Next →</button>
-      </div>
-
-      {/* Mobile Day Tabs */}
-      <div className="calendar-day-tabs">
-        {days.map((day, index) => (
-          <button
-            key={day}
-            className={`day-tab ${selectedDayIndex === index ? 'active' : ''}`}
-            onClick={() => setSelectedDayIndex(index)}
-          >
-            <span className="day-tab-name">{formatDayShort(new Date(day))}</span>
-            <span className="day-tab-date">{new Date(day).getDate()}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Mobile Single Day View */}
-      <div className="calendar-mobile">
-        <div className="calendar-mobile-header">
-          {formatDate(new Date(selectedDay))}
-        </div>
-        <div className="calendar-mobile-slots">
-          {selectedDaySlots.map((slot) => {
-            const isUnavailable = selectedDayIndex === 5 && slot.hour >= 14;
-            if (isUnavailable) return null;
-            return (
-              <div
-                key={`mobile-${slot.hour}`}
-                className={`calendar-mobile-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
-                onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
-              >
-                <span className="mobile-slot-time">{formatTime(slot.hour)}</span>
-                <span className="mobile-slot-status">
-                  {slot.isBooked ? 'Booked' : slot.isPast ? 'Unavailable' : 'Available'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Desktop Grid View */}
-      <div className="calendar-grid">
-        <div className="calendar-header">
-          <div className="calendar-time-header">Time</div>
-          {days.map((day) => <div key={day} className="calendar-day-header">{formatDate(new Date(day))}</div>)}
-        </div>
-        <div className="calendar-body">
-          {[...Array(10)].map((_, i) => {
-            const hour = 8 + i;
-            return (
-              <div key={hour} className="calendar-row">
-                <div className="calendar-time">{formatTime(hour)}</div>
-                {days.map((day, dayIndex) => {
-                  const slot = timeSlots.find((s) => s.date.toDateString() === day && s.hour === hour);
-                  if (!slot || (dayIndex === 5 && hour >= 14)) return <div key={`${day}-${hour}`} className="calendar-slot unavailable">—</div>;
-                  return (
-                    <div
-                      key={`${day}-${hour}`}
-                      className={`calendar-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
-                      onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
-                    >
-                      {slot.isBooked ? 'Booked' : slot.isPast ? '—' : 'Available'}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="calendar-legend">
-        <span className="legend-item"><span className="legend-dot available"></span> Available</span>
-        <span className="legend-item"><span className="legend-dot booked"></span> Booked</span>
-        <span className="legend-item"><span className="legend-dot past"></span> Unavailable</span>
-      </div>
-    </div>
-  );
-};
 
 /* ============= MODAL COMPONENT (PRESERVED FOR REFERENCE) =============
 const AppointmentModal = ({ isOpen, onClose }) => {
@@ -426,52 +213,14 @@ const HomePage = () => {
             </div>
           ))}
         </div>
-
-        {/* Mobile Carousel */}
-        <div className="services-carousel mobile-only">
-          <button className="carousel-btn carousel-prev" onClick={prevSlide} aria-label="Previous">
-            ‹
-          </button>
-          <div className="carousel-container">
-            <div className="carousel-track" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-              {services.map((service, index) => (
-                <div key={index} className="service-card carousel-slide">
-                  <div className="service-icon">{service.icon}</div>
-                  <h3>{service.title}</h3>
-                  <p>{service.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <button className="carousel-btn carousel-next" onClick={nextSlide} aria-label="Next">
-            ›
-          </button>
-          <div className="carousel-dots">
-            {services.map((_, index) => (
-              <button
-                key={index}
-                className={`carousel-dot ${currentSlide === index ? 'active' : ''}`}
-                onClick={() => setCurrentSlide(index)}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Google Calendar Integration */}
-      <section className="calendar-section">
-        <h5>Check our calendar to see available appointment slots</h5>
-        <GoogleCalendar onSelectSlot={(time) => {
-          console.log('Selected slot:', time);
-        }} />
-      </section>
+</section>
+       
     </main>
   );
 };
 
 // ============= CONTACT PAGE =============
-const ContactPage = () => {
+const ContactPage = ({ settings }) => {
   const [expandedSections, setExpandedSections] = useState({
     contactInfo: false,
     socialMedia: false,
@@ -569,7 +318,7 @@ ${message}`;
           {expandedSections.socialMedia && (
             <div className="collapsible-content social-media">
               <div className="social-links">
-                <a href="https://instagram.com" className="social-link" target="_blank" rel="noopener noreferrer">
+                <a href={settings.instagramUrl} className="social-link" target="_blank" rel="noopener noreferrer">
                   <span>📷</span> Instagram
                 </a>
               </div>
@@ -910,7 +659,8 @@ const FAQTestimoniesPage = () => {
 };
 
 // ============= BOOK NOW PAGE =============
-const BookNowPage = () => {
+const BookNowPage = ({ onSelectSlot }) => {
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -954,6 +704,220 @@ ${message || 'None provided'}`;
     // Open default email client
     window.location.href = mailtoLink;
   };
+  // ============= GOOGLE CALENDAR COMPONENT =============
+const GoogleCalendar = ({ onSelectSlot }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [events, setEvents] = useState([]);
+  const [error, setError] = useState(null);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [gapi, setGapi] = useState(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // For mobile view
+
+  useEffect(() => {
+    const loadGapi = async () => {
+      try {
+        const gapiModule = await import('gapi-script');
+        const gapiClient = gapiModule.gapi;
+
+        gapiClient.load('client:auth2', () => {
+          gapiClient.client
+            .init({
+              apiKey: GOOGLE_CALENDAR_CONFIG.apiKey,
+              clientId: GOOGLE_CALENDAR_CONFIG.clientId,
+              scope: GOOGLE_CALENDAR_CONFIG.scope,
+              discoveryDocs: GOOGLE_CALENDAR_CONFIG.discoveryDocs,
+            })
+            .then(() => {
+              setGapi(gapiClient);
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setError('Failed to initialize Google Calendar');
+              setIsLoading(false);
+            });
+        });
+      } catch {
+        setError('Failed to load Google Calendar');
+        setIsLoading(false);
+      }
+    };
+
+    loadGapi();
+  }, []);
+
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const fetchEvents = async () => {
+    if (!gapi) return;
+    try {
+      setIsLoading(true);
+      const startOfWeek = getStartOfWeek(currentWeek);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+      const response = await gapi.client.calendar.events.list({
+        calendarId: GOOGLE_CALENDAR_CONFIG.calendarId,
+        timeMin: startOfWeek.toISOString(),
+        timeMax: endOfWeek.toISOString(),
+        showDeleted: false,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+      const items = response.result.items || [];
+      console.log('Fetched events:', items);
+      setEvents(items);
+      setError(null);
+    } catch (err) {
+      console.error('Calendar API Error:', err);
+      const errorMsg = err?.result?.error?.message || 'Unable to load calendar.';
+      setError(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (gapi) fetchEvents();
+  }, [currentWeek, gapi]);
+
+  const navigateWeek = (direction) => {
+    const newDate = new Date(currentWeek);
+    newDate.setDate(newDate.getDate() + direction * 7);
+    setCurrentWeek(newDate);
+  };
+
+  const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const formatTime = (hour) => `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+
+  const generateTimeSlots = () => {
+    const slots = [];
+    const startOfWeek = getStartOfWeek(currentWeek);
+    for (let day = 0; day < 6; day++) {
+      const date = new Date(startOfWeek);
+      date.setDate(date.getDate() + day);
+      const endHour = day === 5 ? 14 : 18;
+      for (let hour = 8; hour < endHour; hour++) {
+        const slotTime = new Date(date);
+        slotTime.setHours(hour, 0, 0, 0);
+        const isBooked = events.some((event) => {
+          const eventStart = new Date(event.start.dateTime || event.start.date);
+          const eventEnd = new Date(event.end.dateTime || event.end.date);
+          return slotTime >= eventStart && slotTime < eventEnd;
+        });
+        const isPast = slotTime < new Date();
+        slots.push({ date: new Date(date), time: slotTime, hour, isBooked, isPast, dayIndex: day });
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+  const days = [...new Set(timeSlots.map((s) => s.date.toDateString()))];
+
+  if (isLoading && events.length === 0) {
+    return <div className="calendar-loading"><p>Loading calendar...</p></div>;
+  }
+
+  if (error) {
+    return <div className="calendar-error"><p>{error}</p><button className="btn" onClick={fetchEvents}>Try Again</button></div>;
+  }
+
+  const formatDayShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
+  const selectedDay = days[selectedDayIndex];
+  const selectedDaySlots = timeSlots.filter((s) => s.dayIndex === selectedDayIndex);
+
+  return (
+    <div className="google-calendar">
+      <div className="calendar-nav">
+        <button className="btn calendarBtn" onClick={() => navigateWeek(-1)}>← Previous</button>
+        <h3 className="calendar-nav-title">{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
+        <button className="btn calendarBtn" onClick={() => navigateWeek(1)}>Next →</button>
+      </div>
+
+      {/* Mobile Day Tabs */}
+      <div className="calendar-day-tabs">
+        {days.map((day, index) => (
+          <button
+            key={day}
+            className={`day-tab ${selectedDayIndex === index ? 'active' : ''}`}
+            onClick={() => setSelectedDayIndex(index)}
+          >
+            <span className="day-tab-name">{formatDayShort(new Date(day))}</span>
+            <span className="day-tab-date">{new Date(day).getDate()}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile Single Day View */}
+      <div className="calendar-mobile">
+        <div className="calendar-mobile-header">
+          {formatDate(new Date(selectedDay))}
+        </div>
+        <div className="calendar-mobile-slots">
+          {selectedDaySlots.map((slot) => {
+            const isUnavailable = selectedDayIndex === 5 && slot.hour >= 14;
+            if (isUnavailable) return null;
+            return (
+              <div
+                key={`mobile-${slot.hour}`}
+                className={`calendar-mobile-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
+                onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
+              >
+                <span className="mobile-slot-time">{formatTime(slot.hour)}</span>
+                <span className="mobile-slot-status">
+                  {slot.isBooked ? 'Booked' : slot.isPast ? 'Unavailable' : 'Available'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop Grid View */}
+      <div className="calendar-grid">
+        <div className="calendar-header">
+          <div className="calendar-time-header">Time</div>
+          {days.map((day) => <div key={day} className="calendar-day-header">{formatDate(new Date(day))}</div>)}
+        </div>
+        <div className="calendar-body">
+          {[...Array(10)].map((_, i) => {
+            const hour = 8 + i;
+            return (
+              <div key={hour} className="calendar-row">
+                <div className="calendar-time">{formatTime(hour)}</div>
+                {days.map((day, dayIndex) => {
+                  const slot = timeSlots.find((s) => s.date.toDateString() === day && s.hour === hour);
+                  if (!slot || (dayIndex === 5 && hour >= 14)) return <div key={`${day}-${hour}`} className="calendar-slot unavailable">—</div>;
+                  return (
+                    <div
+                      key={`${day}-${hour}`}
+                      className={`calendar-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
+                      onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
+                    >
+                      {slot.isBooked ? 'Booked' : slot.isPast ? '—' : 'Available'}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="calendar-legend">
+        <span className="legend-item"><span className="legend-dot available"></span> Available</span>
+        <span className="legend-item"><span className="legend-dot booked"></span> Booked</span>
+        <span className="legend-item"><span className="legend-dot past"></span> Unavailable</span>
+      </div>
+    </div>
+  );
+};
 
   return (
     <main className="page book-now-page">
@@ -961,7 +925,7 @@ ${message || 'None provided'}`;
         <h2>Book an Appointment</h2>
         <p>Schedule your service with Old Reliable Automotive</p>
       </div>
-
+<div className="booking-container">
       <section className="booking-form-section">
         <form onSubmit={handleSubmit} className="appointment-form booking-form">
           <div className="form-group">
@@ -1065,6 +1029,14 @@ ${message || 'None provided'}`;
           </button>
         </form>
       </section>
+
+      <section className="calendar-section">
+        <h5>Check our calendar to see available appointment slots</h5>
+        <GoogleCalendar onSelectSlot={(time) => {
+          console.log('Selected slot:', time);
+        }} />
+      </section>
+      </div>
     </main>
   );
 };
@@ -1092,6 +1064,7 @@ const getDefaultSettings = () => ({
   copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
   // Branding & Theme
   heroLogo: '/hero-logo-nobackground.png',
+  navLogo: '/nav-menu-logo-nobackground.png',
   colorRust: '#8b4513',
   colorGold: '#d4a574',
   colorCream: '#f5f1e8',
@@ -1220,6 +1193,7 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
       // Entering edit mode - store current values
       setOriginalBranding({
         heroLogo: settings.heroLogo,
+        navLogo: settings.navLogo,
         colorRust: settings.colorRust,
         colorGold: settings.colorGold,
         colorCream: settings.colorCream,
@@ -1273,6 +1247,7 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
       setSettings(prev => ({
         ...prev,
         heroLogo: defaults.heroLogo,
+        navLogo: defaults.navLogo,
         colorRust: defaults.colorRust,
         colorGold: defaults.colorGold,
         colorCream: defaults.colorCream,
@@ -1535,27 +1510,53 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
 
           <section className="admin-section">
             <h3>Logo</h3>
-            <div className="form-group">
-              <label htmlFor="heroLogo">Hero Logo</label>
-              <select
-                id="heroLogo"
-                name="heroLogo"
-                value={settings.heroLogo || ''}
-                onChange={handleChange}
-                disabled={!brandingEditMode}
-              >
-                <option value="">Select a logo</option>
-                {availableImages.map(img => (
-                  <option key={img} value={img}>{img}</option>
-                ))}
-              </select>
-            </div>
-            {settings.heroLogo && (
-              <div className="logo-preview">
-                <p>Preview:</p>
-                <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="heroLogo">Hero Logo</label>
+                <select
+                  id="heroLogo"
+                  name="heroLogo"
+                  value={settings.heroLogo || ''}
+                  onChange={handleChange}
+                  disabled={!brandingEditMode}
+                >
+                  <option value="">Select a logo</option>
+                  {availableImages.map(img => (
+                    <option key={img} value={img}>{img}</option>
+                  ))}
+                </select>
+                {settings.heroLogo && (
+                  <div className="logo-preview">
+                    <p>Preview:</p>
+                    <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+                  </div>
+                )}
               </div>
-            )}
+
+
+              <div className="form-group">
+                <label htmlFor="navLogo">Navigation Menu Logo</label>
+                <select
+                  id="navLogo"
+                  name="navLogo"
+                  value={settings.navLogo || ''}
+                  onChange={handleChange}
+                  disabled={!brandingEditMode}
+                >
+                  <option value="">Select a logo</option>
+                  {availableImages.map(img => (
+                    <option key={img} value={img}>{img}</option>
+                  ))}
+                </select>
+                {settings.navLogo && (
+                  <div className="logo-preview">
+                    <p>Preview:</p>
+                    <img src={settings.navLogo} alt="Nav logo preview" style={{ maxWidth: '60px', maxHeight: '60px' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
           </section>
 
           <section className="admin-section">
@@ -2018,7 +2019,12 @@ const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse, 
     <nav className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="nav-logo">
-          <span className="logo-icon">⚙️</span>
+          <img
+            src={settings?.navLogo || '/nav-menu-logo-nobackground.png'}
+            alt="Logo"
+            className="logo-icon-img"
+            style={{ width: isCollapsed ? '32px' : '40px', height: 'auto' }}
+          />
           {!isCollapsed && <span className="logo-text">{CONFIGURATION.header.tagline}</span>}
         </div>
         <button className="sidebar-toggle" onClick={onToggleCollapse} aria-label="Toggle sidebar">
@@ -2058,7 +2064,7 @@ const Navigation = ({ currentPage, onPageChange, isCollapsed, onToggleCollapse, 
         </li>
         <li>
           <button
-            className={`nav-link nav-book-btn ${currentPage === 'book' ? 'active' : ''}`}
+            className={`nav-link  ${currentPage === 'book' ? 'active' : ''}`}
             onClick={() => onPageChange('book')}
             title="Book an Appointment"
           >
@@ -2247,7 +2253,7 @@ export default function ORMWebpage() {
       case 'home':
         return <HomePage />;
       case 'contact':
-        return <ContactPage />;
+        return <ContactPage settings={settings} />;
       case 'faq':
         return <FAQTestimoniesPage />;
       case 'book':
