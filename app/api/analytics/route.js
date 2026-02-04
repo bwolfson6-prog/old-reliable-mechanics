@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { NextResponse } from 'next/server';
-
+import CONFIG from '../../../config.json';
+const CONFIGURATION = CONFIG.default || CONFIG;
 const ANALYTICS_KEY = 'ora_analytics';
 
 const url = process.env.UPSTASH_REDIS_REST_URL || process.env.ora_datastorage_KV_REST_API_URL;
@@ -35,6 +36,14 @@ export async function POST(request) {
 
   try {
     const { page } = await request.json();
+    const hostname = request.headers.get('host');
+    const expectedHost = CONFIGURATION.header.homepage_url
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '');
+
+    if (hostname !== expectedHost) {
+      return NextResponse.json({ success: true, skipped: true });
+    }
 
     if (!page || page === 'admin') {
       return NextResponse.json({ success: true, skipped: true });
