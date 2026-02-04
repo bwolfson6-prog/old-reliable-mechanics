@@ -443,7 +443,7 @@ a:hover {
 }
 
 .hero-logo {
-  width: 30%;
+  width: 25%;
   height: auto;
   object-fit: contain;
   display: block;
@@ -1355,6 +1355,7 @@ a:hover {
   border-radius: 8px;
   border: 2px solid var(--light-gold);
   transition: all 0.3s ease;
+  max-width: 25%;
 }
 
 .testimonial-card:hover {
@@ -2016,6 +2017,81 @@ input[readonly] {
   cursor: not-allowed;
 }
 
+/* Disabled inputs */
+input:disabled,
+select:disabled {
+  background-color: var(--light-gray);
+  color: var(--text-light);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Admin hint text */
+.admin-hint {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-style: italic;
+  margin-top: var(--spacing-xs);
+}
+
+/* Color Input Wrapper */
+.color-input-wrapper {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.color-input-wrapper input[type="color"] {
+  width: 50px;
+  height: 40px;
+  padding: 2px;
+  border: 2px solid var(--border-gray);
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.color-input-wrapper input[type="color"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch {
+  border-radius: 2px;
+  border: none;
+}
+
+.color-input-wrapper input[type="text"] {
+  flex: 1;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+/* Logo Preview */
+.logo-preview {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--light-gray);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.logo-preview p {
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.logo-preview img {
+  border-radius: 4px;
+  background: white;
+  padding: var(--spacing-sm);
+}
+
 /* Admin Login Form */
 .admin-login-form {
   max-width: 400px;
@@ -2299,4 +2375,245 @@ input[readonly] {
   .sidebar.collapsed .nav-footer {
     display: none;
   }
+}
+
+/* ============= REVIEW SYSTEM STYLES ============= */
+
+/* Leave a Review Section (FAQ Page) */
+.leave-review-section {
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 2px solid var(--border-gray);
+  text-align: center;
+}
+
+.review-form {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: left;
+  background: white;
+  padding: var(--spacing-lg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.review-form h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--dark-brown);
+}
+
+.star-rating-input {
+  display: flex;
+  gap: 4px;
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.2s, transform 0.2s;
+  padding: 4px;
+}
+
+.star-btn.active {
+  opacity: 1;
+}
+
+.star-btn:hover {
+  transform: scale(1.2);
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.review-success {
+  background: var(--accent-green);
+  color: white;
+  padding: var(--spacing-md);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.review-success p {
+  margin-bottom: var(--spacing-sm);
+}
+
+.review-success .btn {
+  background: white;
+  color: var(--accent-green);
+}
+
+.review-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: var(--spacing-sm);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Admin Reviews Tab */
+.review-filters {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filter-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 2px solid var(--border-gray);
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: var(--rust);
+}
+
+.filter-btn.active {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: white;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.review-card {
+  background: white;
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--border-gray);
+}
+
+.review-card.review-pending {
+  border-left-color: #f59e0b;
+}
+
+.review-card.review-approved {
+  border-left-color: var(--accent-green);
+}
+
+.review-card.review-rejected {
+  border-left-color: #dc2626;
+  opacity: 0.7;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.review-author {
+  font-weight: 600;
+  color: var(--dark-brown);
+}
+
+.review-rating {
+  font-size: 0.9rem;
+}
+
+.review-status-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.review-status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.review-status-badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.review-status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.review-text {
+  color: var(--text-dark);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.5;
+}
+
+.review-meta {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: var(--spacing-sm);
+}
+
+.review-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.btn-approve {
+  background: var(--accent-green);
+  color: white;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-approve:hover {
+  background: #047857;
+}
+
+.btn-reject {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-reject:hover {
+  background: #d97706;
+}
+
+.btn-delete {
+  background: #dc2626;
+  color: white;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-delete:hover {
+  background: #b91c1c;
 }

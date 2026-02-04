@@ -376,14 +376,14 @@ const AppointmentModal = ({ isOpen, onClose }) => {
 ============= END MODAL COMPONENT =============*/
 
 // ============= HERO HEADER (persistent across all pages) =============
-const HeroHeader = () => {
+const HeroHeader = ({ settings }) => {
+  const logoSrc = settings?.heroLogo || '/hero-logo-nobackground.png';
+
   return (
     <section className="hero">
-
       <div className="hero-content">
-
         <div className="hero-logo-container">
-          <img src="\grok_image_1769728748882-removebg-preview.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
+          <img src={logoSrc} alt="Old Reliable Automotive Logo" className="hero-logo" />
         </div>
       </div>
       <div className="hero-accent"></div>
@@ -665,6 +665,19 @@ ${message}`;
 // ============= FAQ & TESTIMONIES PAGE =============
 const FAQTestimoniesPage = () => {
   const [expandedFAQ, setExpandedFAQ] = useState(null);
+  const [approvedReviews, setApprovedReviews] = useState([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, text: '' });
+  const [reviewStatus, setReviewStatus] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch approved reviews on mount
+  useEffect(() => {
+    fetch('/api/reviews?status=approved')
+      .then(res => res.json())
+      .then(data => setApprovedReviews(data.reviews || []))
+      .catch(err => console.error('Failed to fetch reviews:', err));
+  }, []);
 
   const faqs = [
     {
@@ -699,35 +712,72 @@ const FAQTestimoniesPage = () => {
     }
   ];
 
-  const testimonials = [
+  // Static testimonials (always shown)
+  const staticTestimonials = [
     {
-      id: 1,
+      id: 'static-1',
       name: "Sarah M.",
       rating: 5,
       text: "Incredibly convenient having the mechanic come to my home. The service was professional and the pricing was fair. Highly recommend!"
     },
     {
-      id: 2,
+      id: 'static-2',
       name: "John D.",
       rating: 5,
       text: "Finally found a mechanic I can trust. Been using Old Reliable for 2 years now. They treat you right and do quality work."
     },
     {
-      id: 3,
+      id: 'static-3',
       name: "Maria L.",
       rating: 5,
       text: "Saved me so much time not having to drive to a shop. The technician was knowledgeable and explained everything clearly."
     },
     {
-      id: 4,
+      id: 'static-4',
       name: "Robert T.",
       rating: 5,
       text: "Best service I've had in years. No upselling, no hidden fees. Just honest, reliable work. That's the Old Reliable difference!"
     }
   ];
 
+  // Combine static + approved reviews
+  const allTestimonials = [...approvedReviews];
+
   const toggleFAQ = (id) => {
     setExpandedFAQ(expandedFAQ === id ? null : id);
+  };
+
+  const handleReviewChange = (e) => {
+    const { name, value } = e.target;
+    setReviewForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setReviewStatus('');
+
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewForm),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setReviewStatus('success');
+        setReviewForm({ name: '', rating: 5, text: '' });
+        setShowReviewForm(false);
+      } else {
+        setReviewStatus(data.error || 'Failed to submit review');
+      }
+    } catch (error) {
+      setReviewStatus('Failed to submit review. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -740,19 +790,96 @@ const FAQTestimoniesPage = () => {
       {/* Testimonials Section */}
       <section className="testimonials">
         <h2>What Our Customers Say</h2>
-        <div className="testimonials-grid">
-          {testimonials.map(testimonial => (
-            <div key={testimonial.id} className="testimonial-card">
-              <div className="rating">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <span key={i} className="star">⭐</span>
-                ))}
+
+        {allTestimonials.length === 0 ? (
+          <h5>No testimonials available yet, be the first to leave a review!</h5>
+        ) : (
+          <div className="testimonials-grid">
+            {allTestimonials.map(testimonial => (
+              <div key={testimonial.id} className="testimonial-card">
+                <div className="rating">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <span key={i} className="star">⭐</span>
+                  ))}
+                </div>
+                <p className="testimonial-text">&ldquo;{testimonial.text}&rdquo;</p>
+                <p className="testimonial-author">— {testimonial.name}</p>
               </div>
-              <p className="testimonial-text">&ldquo;{testimonial.text}&rdquo;</p>
-              <p className="testimonial-author">— {testimonial.name}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Leave a Review Section - now always visible */}
+        <div className="leave-review-section">
+          {reviewStatus === 'success' ? (
+            <div className="review-success">
+              <p>Thank you for your review! It will appear here once approved.</p>
+              <button className="btn" onClick={() => setReviewStatus('')}>Write Another Review</button>
             </div>
-          ))}
+          ) : !showReviewForm ? (
+            <button className="btn btn-primary" onClick={() => setShowReviewForm(true)}>
+              Leave a Review
+            </button>
+          ) : (
+            <form className="review-form" onSubmit={handleReviewSubmit}>
+              <h3>Share Your Experience</h3>
+              <div className="form-group">
+                <label htmlFor="review-name">Your Name</label>
+                <input
+                  id="review-name"
+                  name="name"
+                  type="text"
+                  value={reviewForm.name}
+                  onChange={handleReviewChange}
+                  placeholder="John D."
+                  required
+                  maxLength={50}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="review-rating">Rating</label>
+                <div className="star-rating-input">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`star-btn ${reviewForm.rating >= star ? 'active' : ''}`}
+                      onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="review-text">Your Review</label>
+                <textarea
+                  id="review-text"
+                  name="text"
+                  value={reviewForm.text}
+                  onChange={handleReviewChange}
+                  placeholder="Tell us about your experience..."
+                  required
+                  rows={4}
+                  maxLength={1000}
+                />
+                <span className="char-count">{reviewForm.text.length}/1000</span>
+              </div>
+              {reviewStatus && reviewStatus !== 'success' && (
+                <div className="review-error">{reviewStatus}</div>
+              )}
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit Review'}
+                </button>
+                <button type="button" className="btn" onClick={() => setShowReviewForm(false)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
+
       </section>
 
       {/* FAQ Section */}
@@ -963,6 +1090,12 @@ const getDefaultSettings = () => ({
   instagramUrl: '',
   disclaimer: CONFIGURATION.footer?.disclaimer || 'Services are performed at the customer\'s location. Please ensure a safe working environment for our technicians.',
   copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
+  // Branding & Theme
+  heroLogo: '/hero-logo-nobackground.png',
+  colorRust: '#8b4513',
+  colorGold: '#d4a574',
+  colorCream: '#f5f1e8',
+  colorDarkBrown: '#3e2723',
 });
 
 // ============= ADMIN PAGE =============
@@ -974,6 +1107,60 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
   const [activeTab, setActiveTab] = useState('settings');
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [availableImages, setAvailableImages] = useState([]);
+  const [brandingEditMode, setBrandingEditMode] = useState(false);
+  const [originalBranding, setOriginalBranding] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState('pending');
+
+  // Fetch reviews when tab changes to reviews
+  useEffect(() => {
+    if (activeTab === 'reviews' && isAuthenticated) {
+      fetchReviews();
+    }
+  }, [activeTab, isAuthenticated, reviewFilter]);
+
+  const fetchReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const url = reviewFilter === 'all' ? '/api/reviews' : `/api/reviews?status=${reviewFilter}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setReviews(data.reviews || []);
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleReviewAction = async (id, action) => {
+    try {
+      if (action === 'delete') {
+        await fetch(`/api/reviews?id=${id}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/reviews', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: action }),
+        });
+      }
+      fetchReviews();
+    } catch (err) {
+      console.error('Failed to update review:', err);
+    }
+  };
+
+  // Fetch available images for logo selector
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch('/api/images')
+        .then(res => res.json())
+        .then(data => setAvailableImages(data.images || []))
+        .catch(err => console.error('Failed to fetch images:', err));
+    }
+  }, [isAuthenticated]);
 
   // Fetch analytics when tab changes to analytics
   useEffect(() => {
@@ -1025,6 +1212,73 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
   const handleToggle = (name) => {
     setSettings(prev => ({ ...prev, [name]: !prev[name] }));
     setSaveStatus('');
+  };
+
+  // Branding edit mode toggle - stores original values on enter, reverts on exit without save
+  const handleBrandingEditToggle = () => {
+    if (!brandingEditMode) {
+      // Entering edit mode - store current values
+      setOriginalBranding({
+        heroLogo: settings.heroLogo,
+        colorRust: settings.colorRust,
+        colorGold: settings.colorGold,
+        colorCream: settings.colorCream,
+        colorDarkBrown: settings.colorDarkBrown,
+      });
+    } else {
+      // Leaving edit mode without saving - revert changes
+      if (originalBranding) {
+        setSettings(prev => ({
+          ...prev,
+          ...originalBranding,
+        }));
+      }
+    }
+    setBrandingEditMode(!brandingEditMode);
+    setSaveStatus('');
+  };
+
+  // Save branding and exit edit mode
+  const handleBrandingSave = async () => {
+    setSaveStatus('Saving...');
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      if (response.ok) {
+        localStorage.setItem('orm_admin_settings', JSON.stringify(settings));
+        setSaveStatus('Branding saved successfully!');
+        setBrandingEditMode(false);
+        setOriginalBranding(null);
+        setTimeout(() => setSaveStatus(''), 3000);
+      } else {
+        const data = await response.json();
+        setSaveStatus(`Error: ${data.error || 'Failed to save branding'}`);
+      }
+    } catch (error) {
+      localStorage.setItem('orm_admin_settings', JSON.stringify(settings));
+      setSaveStatus('Saved locally (server unavailable)');
+      setBrandingEditMode(false);
+      setOriginalBranding(null);
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
+  };
+
+  // Reset branding to defaults
+  const handleBrandingReset = () => {
+    if (window.confirm('Reset branding to default values?')) {
+      const defaults = getDefaultSettings();
+      setSettings(prev => ({
+        ...prev,
+        heroLogo: defaults.heroLogo,
+        colorRust: defaults.colorRust,
+        colorGold: defaults.colorGold,
+        colorCream: defaults.colorCream,
+        colorDarkBrown: defaults.colorDarkBrown,
+      }));
+    }
   };
 
   const handleSave = async (e) => {
@@ -1238,6 +1492,18 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
           Site Settings
         </button>
         <button
+          className={`admin-tab ${activeTab === 'branding' ? 'active' : ''}`}
+          onClick={() => setActiveTab('branding')}
+        >
+          Branding
+        </button>
+        <button
+          className={`admin-tab ${activeTab === 'reviews' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reviews')}
+        >
+          Reviews
+        </button>
+        <button
           className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => setActiveTab('analytics')}
         >
@@ -1247,6 +1513,239 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
 
       {activeTab === 'analytics' ? (
         renderAnalytics()
+      ) : activeTab === 'branding' ? (
+        <div className="admin-form">
+          <section className="admin-section">
+            <div className="toggle-container">
+              <span className="toggle-label">Edit Branding</span>
+              <button
+                type="button"
+                onClick={handleBrandingEditToggle}
+                className={`toggle-switch ${brandingEditMode ? 'active' : ''}`}
+                aria-pressed={brandingEditMode}
+              >
+                <span className="toggle-slider" />
+              </button>
+              <span className="toggle-status">{brandingEditMode ? 'Editing' : 'Locked'}</span>
+            </div>
+            {!brandingEditMode && (
+              <p className="admin-hint">Enable edit mode to make changes. Unsaved changes will be reverted when you toggle off.</p>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <h3>Logo</h3>
+            <div className="form-group">
+              <label htmlFor="heroLogo">Hero Logo</label>
+              <select
+                id="heroLogo"
+                name="heroLogo"
+                value={settings.heroLogo || ''}
+                onChange={handleChange}
+                disabled={!brandingEditMode}
+              >
+                <option value="">Select a logo</option>
+                {availableImages.map(img => (
+                  <option key={img} value={img}>{img}</option>
+                ))}
+              </select>
+            </div>
+            {settings.heroLogo && (
+              <div className="logo-preview">
+                <p>Preview:</p>
+                <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+              </div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <h3>Theme Colors</h3>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="colorRust">Primary (Rust)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorRust"
+                    name="colorRust"
+                    type="color"
+                    value={settings.colorRust || '#8b4513'}
+                    onChange={handleChange}
+                    disabled={!brandingEditMode}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorRust || '#8b4513'}
+                    onChange={(e) => handleChange({ target: { name: 'colorRust', value: e.target.value } })}
+                    placeholder="#8b4513"
+                    disabled={!brandingEditMode}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="colorGold">Accent (Gold)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorGold"
+                    name="colorGold"
+                    type="color"
+                    value={settings.colorGold || '#d4a574'}
+                    onChange={handleChange}
+                    disabled={!brandingEditMode}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorGold || '#d4a574'}
+                    onChange={(e) => handleChange({ target: { name: 'colorGold', value: e.target.value } })}
+                    placeholder="#d4a574"
+                    disabled={!brandingEditMode}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="colorCream">Background (Cream)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorCream"
+                    name="colorCream"
+                    type="color"
+                    value={settings.colorCream || '#f5f1e8'}
+                    onChange={handleChange}
+                    disabled={!brandingEditMode}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorCream || '#f5f1e8'}
+                    onChange={(e) => handleChange({ target: { name: 'colorCream', value: e.target.value } })}
+                    placeholder="#f5f1e8"
+                    disabled={!brandingEditMode}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="colorDarkBrown">Dark (Brown)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorDarkBrown"
+                    name="colorDarkBrown"
+                    type="color"
+                    value={settings.colorDarkBrown || '#3e2723'}
+                    onChange={handleChange}
+                    disabled={!brandingEditMode}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorDarkBrown || '#3e2723'}
+                    onChange={(e) => handleChange({ target: { name: 'colorDarkBrown', value: e.target.value } })}
+                    placeholder="#3e2723"
+                    disabled={!brandingEditMode}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {brandingEditMode && (
+            <div className="admin-actions">
+              <button type="button" className="btn btn-primary" onClick={handleBrandingSave}>Save Branding</button>
+              <button type="button" className="btn btn-reset" onClick={handleBrandingReset}>Reset to Defaults</button>
+            </div>
+          )}
+          {saveStatus && (
+            <div className={`save-status ${saveStatus.includes('Error') ? 'error' : 'success'}`}>
+              {saveStatus}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'reviews' ? (
+        <div className="admin-form">
+          <section className="admin-section">
+            <h3>Customer Reviews</h3>
+            <p className="admin-hint">Approve or reject customer-submitted reviews. Approved reviews appear on the FAQ & Testimonials page.</p>
+          </section>
+
+          <div className="review-filters">
+            <button
+              className={`filter-btn ${reviewFilter === 'pending' ? 'active' : ''}`}
+              onClick={() => setReviewFilter('pending')}
+            >
+              Pending
+            </button>
+            <button
+              className={`filter-btn ${reviewFilter === 'approved' ? 'active' : ''}`}
+              onClick={() => setReviewFilter('approved')}
+            >
+              Approved
+            </button>
+            <button
+              className={`filter-btn ${reviewFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setReviewFilter('all')}
+            >
+              All
+            </button>
+          </div>
+
+          {reviewsLoading ? (
+            <p>Loading reviews...</p>
+          ) : reviews.length === 0 ? (
+            <div className="admin-notice">
+              <p>No {reviewFilter === 'all' ? '' : reviewFilter} reviews found.</p>
+            </div>
+          ) : (
+            <div className="reviews-list">
+              {reviews.map(review => (
+                <div key={review.id} className={`review-card review-${review.status}`}>
+                  <div className="review-header">
+                    <span className="review-author">{review.name}</span>
+                    <span className="review-rating">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <span key={i}>⭐</span>
+                      ))}
+                    </span>
+                    <span className={`review-status-badge ${review.status}`}>
+                      {review.status}
+                    </span>
+                  </div>
+                  <p className="review-text">{review.text}</p>
+                  <div className="review-meta">
+                    <span className="review-date">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="review-actions">
+                    {review.status !== 'approved' && (
+                      <button
+                        className="btn btn-approve"
+                        onClick={() => handleReviewAction(review.id, 'approved')}
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {review.status !== 'rejected' && review.status !== 'approved' && (
+                      <button
+                        className="btn btn-reject"
+                        onClick={() => handleReviewAction(review.id, 'rejected')}
+                      >
+                        Reject
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-delete"
+                      onClick={() => {
+                        if (window.confirm('Delete this review permanently?')) {
+                          handleReviewAction(review.id, 'delete');
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <div className="admin-notice">
@@ -1760,8 +2259,17 @@ export default function ORMWebpage() {
     }
   };
 
+  // Apply theme colors as CSS custom properties
+  const themeStyles = {
+    '--rust': settings.colorRust || '#8b4513',
+    '--gold': settings.colorGold || '#d4a574',
+    '--cream': settings.colorCream || '#f5f1e8',
+    '--dark-brown': settings.colorDarkBrown || '#3e2723',
+    '--light-gold': settings.colorGold ? `${settings.colorGold}40` : '#e8d5b7',
+  };
+
   return (
-    <div className={`app ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`} style={themeStyles}>
       <Navigation
         currentPage={currentPage}
         onPageChange={setCurrentPage}
@@ -1773,7 +2281,7 @@ export default function ORMWebpage() {
         onLogout={handleLogout}
       />
       <div className="main-content">
-        <HeroHeader />
+        <HeroHeader settings={settings} />
         {renderPage()}
         <Footer />
       </div>
