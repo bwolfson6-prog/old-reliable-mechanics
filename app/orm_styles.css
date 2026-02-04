@@ -2016,6 +2016,59 @@ input[readonly] {
   cursor: not-allowed;
 }
 
+/* Color Input Wrapper */
+.color-input-wrapper {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.color-input-wrapper input[type="color"] {
+  width: 50px;
+  height: 40px;
+  padding: 2px;
+  border: 2px solid var(--border-gray);
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-input-wrapper input[type="color"]::-webkit-color-swatch {
+  border-radius: 2px;
+  border: none;
+}
+
+.color-input-wrapper input[type="text"] {
+  flex: 1;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+/* Logo Preview */
+.logo-preview {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--light-gray);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.logo-preview p {
+  margin-bottom: var(--spacing-sm);
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.logo-preview img {
+  border-radius: 4px;
+  background: white;
+  padding: var(--spacing-sm);
+}
+
 /* Admin Login Form */
 .admin-login-form {
   max-width: 400px;

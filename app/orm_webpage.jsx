@@ -376,14 +376,14 @@ const AppointmentModal = ({ isOpen, onClose }) => {
 ============= END MODAL COMPONENT =============*/
 
 // ============= HERO HEADER (persistent across all pages) =============
-const HeroHeader = () => {
+const HeroHeader = ({ settings }) => {
+  const logoSrc = settings?.heroLogo || '/hero-logo-nobackground.png';
+
   return (
     <section className="hero">
-
       <div className="hero-content">
-
         <div className="hero-logo-container">
-          <img src="\grok_image_1769728748882-removebg-preview.png" alt="Old Reliable Automotive Logo" className="hero-logo" />
+          <img src={logoSrc} alt="Old Reliable Automotive Logo" className="hero-logo" />
         </div>
       </div>
       <div className="hero-accent"></div>
@@ -963,6 +963,12 @@ const getDefaultSettings = () => ({
   instagramUrl: '',
   disclaimer: CONFIGURATION.footer?.disclaimer || 'Services are performed at the customer\'s location. Please ensure a safe working environment for our technicians.',
   copyright: CONFIGURATION.footer?.copyright || '© 2026 Old Reliable Automotive. All rights reserved.',
+  // Branding & Theme
+  heroLogo: '/hero-logo-nobackground.png',
+  colorRust: '#8b4513',
+  colorGold: '#d4a574',
+  colorCream: '#f5f1e8',
+  colorDarkBrown: '#3e2723',
 });
 
 // ============= ADMIN PAGE =============
@@ -974,6 +980,17 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
   const [activeTab, setActiveTab] = useState('settings');
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [availableImages, setAvailableImages] = useState([]);
+
+  // Fetch available images for logo selector
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch('/api/images')
+        .then(res => res.json())
+        .then(data => setAvailableImages(data.images || []))
+        .catch(err => console.error('Failed to fetch images:', err));
+    }
+  }, [isAuthenticated]);
 
   // Fetch analytics when tab changes to analytics
   useEffect(() => {
@@ -1238,6 +1255,12 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
           Site Settings
         </button>
         <button
+          className={`admin-tab ${activeTab === 'branding' ? 'active' : ''}`}
+          onClick={() => setActiveTab('branding')}
+        >
+          Branding
+        </button>
+        <button
           className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`}
           onClick={() => setActiveTab('analytics')}
         >
@@ -1247,6 +1270,121 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
 
       {activeTab === 'analytics' ? (
         renderAnalytics()
+      ) : activeTab === 'branding' ? (
+        <div className="admin-form">
+          <section className="admin-section">
+            <h3>Logo</h3>
+            <div className="form-group">
+              <label htmlFor="heroLogo">Hero Logo</label>
+              <select
+                id="heroLogo"
+                name="heroLogo"
+                value={settings.heroLogo || ''}
+                onChange={handleChange}
+              >
+                <option value="">Select a logo</option>
+                {availableImages.map(img => (
+                  <option key={img} value={img}>{img}</option>
+                ))}
+              </select>
+            </div>
+            {settings.heroLogo && (
+              <div className="logo-preview">
+                <p>Preview:</p>
+                <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+              </div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <h3>Theme Colors</h3>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="colorRust">Primary (Rust)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorRust"
+                    name="colorRust"
+                    type="color"
+                    value={settings.colorRust || '#8b4513'}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorRust || '#8b4513'}
+                    onChange={(e) => handleChange({ target: { name: 'colorRust', value: e.target.value } })}
+                    placeholder="#8b4513"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="colorGold">Accent (Gold)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorGold"
+                    name="colorGold"
+                    type="color"
+                    value={settings.colorGold || '#d4a574'}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorGold || '#d4a574'}
+                    onChange={(e) => handleChange({ target: { name: 'colorGold', value: e.target.value } })}
+                    placeholder="#d4a574"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="colorCream">Background (Cream)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorCream"
+                    name="colorCream"
+                    type="color"
+                    value={settings.colorCream || '#f5f1e8'}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorCream || '#f5f1e8'}
+                    onChange={(e) => handleChange({ target: { name: 'colorCream', value: e.target.value } })}
+                    placeholder="#f5f1e8"
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="colorDarkBrown">Dark (Brown)</label>
+                <div className="color-input-wrapper">
+                  <input
+                    id="colorDarkBrown"
+                    name="colorDarkBrown"
+                    type="color"
+                    value={settings.colorDarkBrown || '#3e2723'}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    value={settings.colorDarkBrown || '#3e2723'}
+                    onChange={(e) => handleChange({ target: { name: 'colorDarkBrown', value: e.target.value } })}
+                    placeholder="#3e2723"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="admin-actions">
+            <button type="button" className="btn btn-primary" onClick={handleSave}>Save Branding</button>
+          </div>
+          {saveStatus && (
+            <div className={`save-status ${saveStatus.includes('Error') ? 'error' : 'success'}`}>
+              {saveStatus}
+            </div>
+          )}
+        </div>
       ) : (
         <>
           <div className="admin-notice">
@@ -1760,8 +1898,17 @@ export default function ORMWebpage() {
     }
   };
 
+  // Apply theme colors as CSS custom properties
+  const themeStyles = {
+    '--rust': settings.colorRust || '#8b4513',
+    '--gold': settings.colorGold || '#d4a574',
+    '--cream': settings.colorCream || '#f5f1e8',
+    '--dark-brown': settings.colorDarkBrown || '#3e2723',
+    '--light-gold': settings.colorGold ? `${settings.colorGold}40` : '#e8d5b7',
+  };
+
   return (
-    <div className={`app ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`} style={themeStyles}>
       <Navigation
         currentPage={currentPage}
         onPageChange={setCurrentPage}
@@ -1773,7 +1920,7 @@ export default function ORMWebpage() {
         onLogout={handleLogout}
       />
       <div className="main-content">
-        <HeroHeader />
+        <HeroHeader settings={settings} />
         {renderPage()}
         <Footer />
       </div>
