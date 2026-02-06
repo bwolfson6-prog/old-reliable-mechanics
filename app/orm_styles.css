@@ -1374,14 +1374,14 @@ a:hover {
   gap: var(--spacing-lg);
   margin-top: var(--spacing-xl);
 }
-
+/** ============= TESTIMONIAL CARD ============= */
 .testimonial-card {
   background: var(--light-gray);
   padding: var(--spacing-lg);
   border-radius: 8px;
   border: 2px solid var(--light-gold);
   transition: all 0.3s ease;
-  max-width: 25%;
+  max-width: fit-content;
 }
 
 .testimonial-card:hover {
