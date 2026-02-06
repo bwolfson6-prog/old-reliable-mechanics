@@ -1374,7 +1374,7 @@ a:hover {
   gap: var(--spacing-lg);
   margin-top: var(--spacing-xl);
 }
-
+/** ============= TESTIMONIAL CARD ============= */
 .testimonial-card {
   background: var(--light-gray);
   padding: var(--spacing-lg);
