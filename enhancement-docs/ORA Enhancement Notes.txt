@@ -1,0 +1,16 @@
+Admin Menu - 
+ -- Mobile Layout
+	-- Menu options to drop down
+	-- Branding
+		-- all sections extend width
+	-- Reviews
+		-- width extends to far
+	-- Site Setting
+		-- all sections extend width
+	-- Book Now
+		-- Appointment card and calendar overlap stack.
+		-- Appointment card can be a hidden drop down like used in the admin contact page
+	-- FAQ
+		-- Testimonials should be a carousal with max of 10
+	-- Home
+		-- Add a Book Now button to send to book now page

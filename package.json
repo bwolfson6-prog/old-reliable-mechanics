@@ -12,6 +12,7 @@
     "@upstash/redis": "^1.36.1",
     "@vercel/kv": "^3.0.0",
     "autoprefixer": "^10.4.24",
+    "claude": "^0.1.1",
     "gapi-cjs": "^1.0.3",
     "gapi-script": "^1.2.0",
     "next": "^14.2.0",

@@ -1270,10 +1270,30 @@ a:hover {
     margin-right: auto;
 }
 
-.booking-container{
+.booking-container {
   display: grid;
-    grid-template-columns: 25% 75%;
-    gap: var(--spacing-md);
+  grid-template-columns: 25% 75%;
+  gap: var(--spacing-md);
+}
+
+/* Desktop: Show form content always, hide collapsible header */
+.booking-collapsible .booking-form-header {
+  display: none;
+}
+
+.booking-collapsible .booking-form-content {
+  display: block;
+}
+
+/* Booking form collapsible styling */
+.booking-collapsible {
+  border: none;
+  background: transparent;
+}
+
+.booking-collapsible .collapsible-content {
+  border-left: none;
+  padding: 0;
 }
 .appointment-form {
   background: var(--cream);
@@ -1655,6 +1675,72 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  /* Mobile Booking Page - Stack and Collapsible Form */
+  .booking-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  /* Reorder: Calendar first, form second on mobile */
+  .booking-container .calendar-section {
+    order: 1;
+  }
+
+  .booking-container .booking-form-section {
+    order: 2;
+  }
+
+  /* Show collapsible header on mobile */
+  .booking-collapsible .booking-form-header {
+    display: flex;
+  }
+
+  /* Hide form content by default on mobile */
+  .booking-collapsible .booking-form-content {
+    display: none;
+  }
+
+  /* Show form content when expanded */
+  .booking-collapsible .booking-form-content.expanded {
+    display: block;
+    animation: slideDown 0.3s ease;
+  }
+
+  /* Style the booking collapsible like other collapsibles */
+  .booking-collapsible {
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .booking-collapsible .booking-form-header {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--light-gold);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .booking-collapsible .booking-form-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--dark-brown);
+  }
+
+  .booking-collapsible .collapsible-content {
+    padding: var(--spacing-md);
+    background: var(--cream);
+  }
+
+  .booking-collapsible .booking-form {
+    margin-top: 0;
+    border: none;
+  }
+
   .services-grid.desktop-only {
     display: none;
   }
@@ -1726,6 +1812,15 @@ a:hover {
   .collapsible-content {
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  /* Booking form fields full width on mobile */
+  .booking-collapsible .form-group {
+    max-width: 100%;
+  }
+
+  .booking-collapsible .form-row {
+    max-width: 100%;
   }
 }
 
@@ -2623,4 +2718,129 @@ select:disabled {
 
 .btn-delete:hover {
   background: #b91c1c;
+}
+
+/* ============= BOOK NOW BUTTON SECTION ============= */
+.booking-btn-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+  margin-top: auto;
+}
+
+.floating-book-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background-color: var(--desktop-btn-color, #8b4513);
+  color: var(--cream);
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-family: 'Georgia', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+.floating-book-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.floating-book-btn:active {
+  transform: translateY(-2px);
+}
+
+.floating-book-icon {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-book-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.floating-book-text {
+  white-space: nowrap;
+}
+
+/* Desktop-only class */
+.floating-book-btn.desktop-only {
+  display: flex;
+}
+
+/* Mobile-only class (hidden on desktop) */
+.floating-book-btn.mobile-only {
+  display: none;
+}
+
+/* Mobile Styles for Book Now Button */
+@media (max-width: 768px) {
+  .booking-btn-section {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .floating-book-btn {
+    /* Mobile: smaller pill button with icon + text, or FAB style */
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: 1rem;
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  .floating-book-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Icon sizing for mobile */
+  .floating-book-icon {
+    font-size: 1.25rem;
+  }
+
+  .floating-book-icon img {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Mobile-only class (shown on mobile) */
+  .floating-book-btn.mobile-only {
+    display: flex;
+  }
+
+  /* Desktop-only class (hidden on mobile) */
+  .floating-book-btn.desktop-only {
+    display: none;
+  }
+}
+
+/* Pulse/Glow animation for button */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(139, 69, 19, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 24px rgba(139, 69, 19, 0.6), 0 0 20px rgba(212, 165, 116, 0.4);
+  }
+}
+
+/* Fade-in animation for desktop */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

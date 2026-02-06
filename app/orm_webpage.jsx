@@ -179,7 +179,7 @@ const HeroHeader = ({ settings }) => {
 };
 
 // ============= HOME PAGE =============
-const HomePage = () => {
+const HomePage = ({ settings, onPageChange }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const services = [
@@ -197,6 +197,18 @@ const HomePage = () => {
     setCurrentSlide((prev) => (prev - 1 + services.length) % services.length);
   };
 
+  // Extract floating button config (with defaults)
+  const floatingConfig = settings?.interactible_config?.floatingBookNow || {};
+  const mobile = floatingConfig.mobile || {};
+  const desktop = floatingConfig.desktop || {};
+
+  const mobileEnabled = mobile.enabled !== false;
+  const desktopEnabled = desktop.enabled !== false;
+  const mobilePosition = mobile.position || 'bottom-right';
+  const mobileIcon = mobile.icon;
+  const desktopColor = desktop.color || '#8b4513';
+  const desktopText = desktop.text || 'Book Now';
+
   return (
     <main className="page home-page">
       {/* Services Overview */}
@@ -213,8 +225,61 @@ const HomePage = () => {
             </div>
           ))}
         </div>
-</section>
-       
+
+        {/* Mobile Carousel */}
+        <div className="services-carousel mobile-only">
+          <button className="carousel-btn carousel-prev" onClick={prevSlide} aria-label="Previous service">
+            ‹
+          </button>
+          <div className="carousel-container">
+            <div
+              className="carousel-track"
+              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
+              {services.map((service, index) => (
+                <div key={index} className="carousel-slide">
+                  <div className="service-card">
+                    <div className="service-icon">{service.icon}</div>
+                    <h3>{service.title}</h3>
+                    <p>{service.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button className="carousel-btn carousel-next" onClick={nextSlide} aria-label="Next service">
+            ›
+          </button>
+          <div className="carousel-dots">
+            {services.map((_, index) => (
+              <button
+                key={index}
+                className={`carousel-dot ${currentSlide === index ? 'active' : ''}`}
+                onClick={() => setCurrentSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="booking-btn-section">
+        {/* Floating Book Now Button */}
+        {(mobileEnabled || desktopEnabled) && (
+          <button
+            className={`floating-book-btn
+            ${mobileEnabled ? '' : 'desktop-only'}
+            ${desktopEnabled ? '' : 'mobile-only'}
+            mobile-pos-${mobilePosition}`}
+            onClick={() => onPageChange('book')}
+            style={{ '--desktop-btn-color': desktopColor }}
+          >
+            <span className="floating-book-icon">
+              {mobileIcon ? <img src={mobileIcon} alt="" /> : '📅'}
+            </span>
+            <span className="floating-book-text">{desktopText}</span>
+          </button>
+        )}
+      </section>
     </main>
   );
 };
@@ -660,6 +725,7 @@ const FAQTestimoniesPage = () => {
 
 // ============= BOOK NOW PAGE =============
 const BookNowPage = ({ onSelectSlot }) => {
+  const [formExpanded, setFormExpanded] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -705,337 +771,348 @@ ${message || 'None provided'}`;
     window.location.href = mailtoLink;
   };
   // ============= GOOGLE CALENDAR COMPONENT =============
-const GoogleCalendar = ({ onSelectSlot }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [events, setEvents] = useState([]);
-  const [error, setError] = useState(null);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [gapi, setGapi] = useState(null);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0); // For mobile view
+  const GoogleCalendar = ({ onSelectSlot }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [events, setEvents] = useState([]);
+    const [error, setError] = useState(null);
+    const [currentWeek, setCurrentWeek] = useState(new Date());
+    const [gapi, setGapi] = useState(null);
+    const [selectedDayIndex, setSelectedDayIndex] = useState(0); // For mobile view
 
-  useEffect(() => {
-    const loadGapi = async () => {
+    useEffect(() => {
+      const loadGapi = async () => {
+        try {
+          const gapiModule = await import('gapi-script');
+          const gapiClient = gapiModule.gapi;
+
+          gapiClient.load('client:auth2', () => {
+            gapiClient.client
+              .init({
+                apiKey: GOOGLE_CALENDAR_CONFIG.apiKey,
+                clientId: GOOGLE_CALENDAR_CONFIG.clientId,
+                scope: GOOGLE_CALENDAR_CONFIG.scope,
+                discoveryDocs: GOOGLE_CALENDAR_CONFIG.discoveryDocs,
+              })
+              .then(() => {
+                setGapi(gapiClient);
+                setIsLoading(false);
+              })
+              .catch(() => {
+                setError('Failed to initialize Google Calendar');
+                setIsLoading(false);
+              });
+          });
+        } catch {
+          setError('Failed to load Google Calendar');
+          setIsLoading(false);
+        }
+      };
+
+      loadGapi();
+    }, []);
+
+    const getStartOfWeek = (date) => {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
+
+    const fetchEvents = async () => {
+      if (!gapi) return;
       try {
-        const gapiModule = await import('gapi-script');
-        const gapiClient = gapiModule.gapi;
+        setIsLoading(true);
+        const startOfWeek = getStartOfWeek(currentWeek);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-        gapiClient.load('client:auth2', () => {
-          gapiClient.client
-            .init({
-              apiKey: GOOGLE_CALENDAR_CONFIG.apiKey,
-              clientId: GOOGLE_CALENDAR_CONFIG.clientId,
-              scope: GOOGLE_CALENDAR_CONFIG.scope,
-              discoveryDocs: GOOGLE_CALENDAR_CONFIG.discoveryDocs,
-            })
-            .then(() => {
-              setGapi(gapiClient);
-              setIsLoading(false);
-            })
-            .catch(() => {
-              setError('Failed to initialize Google Calendar');
-              setIsLoading(false);
-            });
+        const response = await gapi.client.calendar.events.list({
+          calendarId: GOOGLE_CALENDAR_CONFIG.calendarId,
+          timeMin: startOfWeek.toISOString(),
+          timeMax: endOfWeek.toISOString(),
+          showDeleted: false,
+          singleEvents: true,
+          orderBy: 'startTime',
         });
-      } catch {
-        setError('Failed to load Google Calendar');
+        const items = response.result.items || [];
+        console.log('Fetched events:', items);
+        setEvents(items);
+        setError(null);
+      } catch (err) {
+        console.error('Calendar API Error:', err);
+        const errorMsg = err?.result?.error?.message || 'Unable to load calendar.';
+        setError(errorMsg);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    loadGapi();
-  }, []);
+    useEffect(() => {
+      if (gapi) fetchEvents();
+    }, [currentWeek, gapi]);
 
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
+    const navigateWeek = (direction) => {
+      const newDate = new Date(currentWeek);
+      newDate.setDate(newDate.getDate() + direction * 7);
+      setCurrentWeek(newDate);
+    };
 
-  const fetchEvents = async () => {
-    if (!gapi) return;
-    try {
-      setIsLoading(true);
+    const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const formatTime = (hour) => `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+
+    const generateTimeSlots = () => {
+      const slots = [];
       const startOfWeek = getStartOfWeek(currentWeek);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(endOfWeek.getDate() + 7);
-
-      const response = await gapi.client.calendar.events.list({
-        calendarId: GOOGLE_CALENDAR_CONFIG.calendarId,
-        timeMin: startOfWeek.toISOString(),
-        timeMax: endOfWeek.toISOString(),
-        showDeleted: false,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-      const items = response.result.items || [];
-      console.log('Fetched events:', items);
-      setEvents(items);
-      setError(null);
-    } catch (err) {
-      console.error('Calendar API Error:', err);
-      const errorMsg = err?.result?.error?.message || 'Unable to load calendar.';
-      setError(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (gapi) fetchEvents();
-  }, [currentWeek, gapi]);
-
-  const navigateWeek = (direction) => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(newDate.getDate() + direction * 7);
-    setCurrentWeek(newDate);
-  };
-
-  const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  const formatTime = (hour) => `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
-
-  const generateTimeSlots = () => {
-    const slots = [];
-    const startOfWeek = getStartOfWeek(currentWeek);
-    for (let day = 0; day < 6; day++) {
-      const date = new Date(startOfWeek);
-      date.setDate(date.getDate() + day);
-      const endHour = day === 5 ? 14 : 18;
-      for (let hour = 8; hour < endHour; hour++) {
-        const slotTime = new Date(date);
-        slotTime.setHours(hour, 0, 0, 0);
-        const isBooked = events.some((event) => {
-          const eventStart = new Date(event.start.dateTime || event.start.date);
-          const eventEnd = new Date(event.end.dateTime || event.end.date);
-          return slotTime >= eventStart && slotTime < eventEnd;
-        });
-        const isPast = slotTime < new Date();
-        slots.push({ date: new Date(date), time: slotTime, hour, isBooked, isPast, dayIndex: day });
+      for (let day = 0; day < 6; day++) {
+        const date = new Date(startOfWeek);
+        date.setDate(date.getDate() + day);
+        const endHour = day === 5 ? 14 : 18;
+        for (let hour = 8; hour < endHour; hour++) {
+          const slotTime = new Date(date);
+          slotTime.setHours(hour, 0, 0, 0);
+          const isBooked = events.some((event) => {
+            const eventStart = new Date(event.start.dateTime || event.start.date);
+            const eventEnd = new Date(event.end.dateTime || event.end.date);
+            return slotTime >= eventStart && slotTime < eventEnd;
+          });
+          const isPast = slotTime < new Date();
+          slots.push({ date: new Date(date), time: slotTime, hour, isBooked, isPast, dayIndex: day });
+        }
       }
+      return slots;
+    };
+
+    const timeSlots = generateTimeSlots();
+    const days = [...new Set(timeSlots.map((s) => s.date.toDateString()))];
+
+    if (isLoading && events.length === 0) {
+      return <div className="calendar-loading"><p>Loading calendar...</p></div>;
     }
-    return slots;
+
+    if (error) {
+      return <div className="calendar-error"><p>{error}</p><button className="btn" onClick={fetchEvents}>Try Again</button></div>;
+    }
+
+    const formatDayShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
+    const selectedDay = days[selectedDayIndex];
+    const selectedDaySlots = timeSlots.filter((s) => s.dayIndex === selectedDayIndex);
+
+    return (
+      <div className="google-calendar">
+        <div className="calendar-nav">
+          <button className="btn calendarBtn" onClick={() => navigateWeek(-1)}>← Previous</button>
+          <h3 className="calendar-nav-title">{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
+          <button className="btn calendarBtn" onClick={() => navigateWeek(1)}>Next →</button>
+        </div>
+
+        {/* Mobile Day Tabs */}
+        <div className="calendar-day-tabs">
+          {days.map((day, index) => (
+            <button
+              key={day}
+              className={`day-tab ${selectedDayIndex === index ? 'active' : ''}`}
+              onClick={() => setSelectedDayIndex(index)}
+            >
+              <span className="day-tab-name">{formatDayShort(new Date(day))}</span>
+              <span className="day-tab-date">{new Date(day).getDate()}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile Single Day View */}
+        <div className="calendar-mobile">
+          <div className="calendar-mobile-header">
+            {formatDate(new Date(selectedDay))}
+          </div>
+          <div className="calendar-mobile-slots">
+            {selectedDaySlots.map((slot) => {
+              const isUnavailable = selectedDayIndex === 5 && slot.hour >= 14;
+              if (isUnavailable) return null;
+              return (
+                <div
+                  key={`mobile-${slot.hour}`}
+                  className={`calendar-mobile-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
+                  onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
+                >
+                  <span className="mobile-slot-time">{formatTime(slot.hour)}</span>
+                  <span className="mobile-slot-status">
+                    {slot.isBooked ? 'Booked' : slot.isPast ? 'Unavailable' : 'Available'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Grid View */}
+        <div className="calendar-grid">
+          <div className="calendar-header">
+            <div className="calendar-time-header">Time</div>
+            {days.map((day) => <div key={day} className="calendar-day-header">{formatDate(new Date(day))}</div>)}
+          </div>
+          <div className="calendar-body">
+            {[...Array(10)].map((_, i) => {
+              const hour = 8 + i;
+              return (
+                <div key={hour} className="calendar-row">
+                  <div className="calendar-time">{formatTime(hour)}</div>
+                  {days.map((day, dayIndex) => {
+                    const slot = timeSlots.find((s) => s.date.toDateString() === day && s.hour === hour);
+                    if (!slot || (dayIndex === 5 && hour >= 14)) return <div key={`${day}-${hour}`} className="calendar-slot unavailable">—</div>;
+                    return (
+                      <div
+                        key={`${day}-${hour}`}
+                        className={`calendar-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
+                        onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
+                      >
+                        {slot.isBooked ? 'Booked' : slot.isPast ? '—' : 'Available'}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="calendar-legend">
+          <span className="legend-item"><span className="legend-dot available"></span> Available</span>
+          <span className="legend-item"><span className="legend-dot booked"></span> Booked</span>
+          <span className="legend-item"><span className="legend-dot past"></span> Unavailable</span>
+        </div>
+      </div>
+    );
   };
-
-  const timeSlots = generateTimeSlots();
-  const days = [...new Set(timeSlots.map((s) => s.date.toDateString()))];
-
-  if (isLoading && events.length === 0) {
-    return <div className="calendar-loading"><p>Loading calendar...</p></div>;
-  }
-
-  if (error) {
-    return <div className="calendar-error"><p>{error}</p><button className="btn" onClick={fetchEvents}>Try Again</button></div>;
-  }
-
-  const formatDayShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
-  const selectedDay = days[selectedDayIndex];
-  const selectedDaySlots = timeSlots.filter((s) => s.dayIndex === selectedDayIndex);
-
-  return (
-    <div className="google-calendar">
-      <div className="calendar-nav">
-        <button className="btn calendarBtn" onClick={() => navigateWeek(-1)}>← Previous</button>
-        <h3 className="calendar-nav-title">{formatDate(getStartOfWeek(currentWeek))} - {formatDate(new Date(getStartOfWeek(currentWeek).getTime() + 5 * 24 * 60 * 60 * 1000))}</h3>
-        <button className="btn calendarBtn" onClick={() => navigateWeek(1)}>Next →</button>
-      </div>
-
-      {/* Mobile Day Tabs */}
-      <div className="calendar-day-tabs">
-        {days.map((day, index) => (
-          <button
-            key={day}
-            className={`day-tab ${selectedDayIndex === index ? 'active' : ''}`}
-            onClick={() => setSelectedDayIndex(index)}
-          >
-            <span className="day-tab-name">{formatDayShort(new Date(day))}</span>
-            <span className="day-tab-date">{new Date(day).getDate()}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Mobile Single Day View */}
-      <div className="calendar-mobile">
-        <div className="calendar-mobile-header">
-          {formatDate(new Date(selectedDay))}
-        </div>
-        <div className="calendar-mobile-slots">
-          {selectedDaySlots.map((slot) => {
-            const isUnavailable = selectedDayIndex === 5 && slot.hour >= 14;
-            if (isUnavailable) return null;
-            return (
-              <div
-                key={`mobile-${slot.hour}`}
-                className={`calendar-mobile-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
-                onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
-              >
-                <span className="mobile-slot-time">{formatTime(slot.hour)}</span>
-                <span className="mobile-slot-status">
-                  {slot.isBooked ? 'Booked' : slot.isPast ? 'Unavailable' : 'Available'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Desktop Grid View */}
-      <div className="calendar-grid">
-        <div className="calendar-header">
-          <div className="calendar-time-header">Time</div>
-          {days.map((day) => <div key={day} className="calendar-day-header">{formatDate(new Date(day))}</div>)}
-        </div>
-        <div className="calendar-body">
-          {[...Array(10)].map((_, i) => {
-            const hour = 8 + i;
-            return (
-              <div key={hour} className="calendar-row">
-                <div className="calendar-time">{formatTime(hour)}</div>
-                {days.map((day, dayIndex) => {
-                  const slot = timeSlots.find((s) => s.date.toDateString() === day && s.hour === hour);
-                  if (!slot || (dayIndex === 5 && hour >= 14)) return <div key={`${day}-${hour}`} className="calendar-slot unavailable">—</div>;
-                  return (
-                    <div
-                      key={`${day}-${hour}`}
-                      className={`calendar-slot ${slot.isBooked ? 'booked' : slot.isPast ? 'past' : 'available'}`}
-                      onClick={() => !slot.isBooked && !slot.isPast && onSelectSlot && onSelectSlot(slot.time)}
-                    >
-                      {slot.isBooked ? 'Booked' : slot.isPast ? '—' : 'Available'}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="calendar-legend">
-        <span className="legend-item"><span className="legend-dot available"></span> Available</span>
-        <span className="legend-item"><span className="legend-dot booked"></span> Booked</span>
-        <span className="legend-item"><span className="legend-dot past"></span> Unavailable</span>
-      </div>
-    </div>
-  );
-};
 
   return (
     <main className="page book-now-page">
       <div className="page-header">
         <h2>Book an Appointment</h2>
-        <p>Schedule your service with Old Reliable Automotive</p>
+        <p>Request an appointment below for service with Old Reliable Automotive</p>
       </div>
-<div className="booking-container">
-      <section className="booking-form-section">
-        <form onSubmit={handleSubmit} className="appointment-form booking-form">
-          <div className="form-group">
-            <label htmlFor="name">Name</label>
-            <input
-              id="name"
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="Your full name"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="phone">Phone</label>
-            <input
-              id="phone"
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-              placeholder="(555) 123-4567"
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="date">Preferred Date</label>
-              <input
-                id="date"
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="time">Preferred Time</label>
-              <input
-                id="time"
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="service">Service Type</label>
-            <select
-              id="service"
-              name="service"
-              value={formData.service}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select a service</option>
-              <option value="oil-change">Oil Change</option>
-              <option value="brake-service">Brake Service</option>
-              <option value="tire-rotation">Tire Rotation</option>
-              <option value="battery">Battery Service</option>
-              <option value="maintenance">General Maintenance</option>
-              <option value="repair">General Repair</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="message">Additional Notes</label>
-            <textarea
-              id="message"
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              placeholder="Tell us about your vehicle or special requests..."
-              rows="4"
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary btn-lg">
-            Request Appointment
+      <div className="booking-container">
+        {/* Collapsible Appointment Form - collapses on mobile */}
+        <section className="booking-form-section collapsible-section booking-collapsible">
+          <button
+            className="collapsible-header booking-form-header"
+            onClick={() => setFormExpanded(!formExpanded)}
+            aria-expanded={formExpanded}
+          >
+            <h2>Appointment Details</h2>
+            <span className="collapsible-toggle">{formExpanded ? '−' : '+'}</span>
           </button>
-        </form>
-      </section>
+          <div className={`collapsible-content booking-form-content ${formExpanded ? 'expanded' : ''}`}>
+            <form onSubmit={handleSubmit} className="appointment-form booking-form">
+              <div className="form-group">
+                <label htmlFor="name">Name</label>
+                <input
+                  id="name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Your full name"
+                />
+              </div>
 
-      <section className="calendar-section">
-        <h5>Check our calendar to see available appointment slots</h5>
-        <GoogleCalendar onSelectSlot={(time) => {
-          console.log('Selected slot:', time);
-        }} />
-      </section>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="your@email.com"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Phone</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="date">Preferred Date</label>
+                  <input
+                    id="date"
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="time">Preferred Time</label>
+                  <input
+                    id="time"
+                    type="time"
+                    name="time"
+                    value={formData.time}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="service">Service Type</label>
+                <select
+                  id="service"
+                  name="service"
+                  value={formData.service}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select a service</option>
+                  <option value="oil-change">Oil Change</option>
+                  <option value="brake-service">Brake Service</option>
+                  <option value="tire-rotation">Tire Rotation</option>
+                  <option value="battery">Battery Service</option>
+                  <option value="maintenance">General Maintenance</option>
+                  <option value="repair">General Repair</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="message">Additional Notes</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Tell us about your vehicle or special requests..."
+                  rows="4"
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-lg">
+                Request Appointment
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section className="calendar-section">
+          <h5>Check our calendar to see available appointment slots</h5>
+          <GoogleCalendar onSelectSlot={(time) => {
+            console.log('Selected slot:', time);
+          }} />
+        </section>
       </div>
     </main>
   );
@@ -1069,6 +1146,21 @@ const getDefaultSettings = () => ({
   colorGold: '#d4a574',
   colorCream: '#f5f1e8',
   colorDarkBrown: '#3e2723',
+  // UI Interactibles Configuration
+  interactible_config: {
+    floatingBookNow: {
+      mobile: {
+        enabled: true,
+        icon: '',  // empty = use emoji fallback '📅'
+        position: 'bottom-right',  // 'bottom-right' | 'bottom-left'
+      },
+      desktop: {
+        enabled: true,
+        color: '#8b4513',  // rust color default
+        text: 'Book Now',
+      }
+    }
+  },
 });
 
 // ============= ADMIN PAGE =============
@@ -1081,11 +1173,24 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [availableImages, setAvailableImages] = useState([]);
+  const [availableButtonIcons, setAvailableButtonIcons] = useState([]);
   const [brandingEditMode, setBrandingEditMode] = useState(false);
   const [originalBranding, setOriginalBranding] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewFilter, setReviewFilter] = useState('pending');
+
+  // Collapsible section states - Branding tab
+  const [logosExpanded, setLogosExpanded] = useState(true);
+  const [themeColorsExpanded, setThemeColorsExpanded] = useState(false);
+  const [uiInteractiblesExpanded, setUiInteractiblesExpanded] = useState(false);
+
+  // Collapsible section states - Site Settings tab
+  const [businessInfoExpanded, setBusinessInfoExpanded] = useState(true);
+  const [contactInfoExpanded, setContactInfoExpanded] = useState(false);
+  const [businessHoursExpanded, setBusinessHoursExpanded] = useState(false);
+  const [socialMediaExpanded, setSocialMediaExpanded] = useState(false);
+  const [footerExpanded, setFooterExpanded] = useState(false);
 
   // Fetch reviews when tab changes to reviews
   useEffect(() => {
@@ -1125,13 +1230,20 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
     }
   };
 
-  // Fetch available images for logo selector
+  // Fetch available images for logo selector and button icons
   useEffect(() => {
     if (isAuthenticated) {
+      // Fetch all images (for logos - from root and ui-images)
       fetch('/api/images')
         .then(res => res.json())
         .then(data => setAvailableImages(data.images || []))
         .catch(err => console.error('Failed to fetch images:', err));
+
+      // Fetch button icons specifically from ui-buttons folder
+      fetch('/api/images?folder=ui-buttons')
+        .then(res => res.json())
+        .then(data => setAvailableButtonIcons(data.images || []))
+        .catch(err => console.error('Failed to fetch button icons:', err));
     }
   }, [isAuthenticated]);
 
@@ -1254,6 +1366,24 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
         colorDarkBrown: defaults.colorDarkBrown,
       }));
     }
+  };
+
+  // Helper function for updating nested interactible_config
+  const updateInteractibleConfig = (section, field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      interactible_config: {
+        ...prev.interactible_config,
+        floatingBookNow: {
+          ...prev.interactible_config?.floatingBookNow,
+          [section]: {
+            ...prev.interactible_config?.floatingBookNow?.[section],
+            [field]: value
+          }
+        }
+      }
+    }));
+    setSaveStatus('');
   };
 
   const handleSave = async (e) => {
@@ -1508,143 +1638,295 @@ const AdminPage = ({ settings, setSettings, saveStatus, setSaveStatus, isLoading
             )}
           </section>
 
-          <section className="admin-section">
-            <h3>Logo</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="heroLogo">Hero Logo</label>
-                <select
-                  id="heroLogo"
-                  name="heroLogo"
-                  value={settings.heroLogo || ''}
-                  onChange={handleChange}
-                  disabled={!brandingEditMode}
-                >
-                  <option value="">Select a logo</option>
-                  {availableImages.map(img => (
-                    <option key={img} value={img}>{img}</option>
-                  ))}
-                </select>
-                {settings.heroLogo && (
-                  <div className="logo-preview">
-                    <p>Preview:</p>
-                    <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+          {/* Logos Section - Collapsible */}
+          <section className="admin-section collapsible-section">
+            <button
+              className="collapsible-header"
+              onClick={() => setLogosExpanded(!logosExpanded)}
+              aria-expanded={logosExpanded}
+            >
+              <h3 style={{ margin: 0 }}>Logos</h3>
+              <span className="collapsible-toggle">{logosExpanded ? '−' : '+'}</span>
+            </button>
+            {logosExpanded && (
+              <div className="collapsible-content" style={{ padding: 'var(--spacing-md)' }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="heroLogo">Hero Logo</label>
+                    <select
+                      id="heroLogo"
+                      name="heroLogo"
+                      value={settings.heroLogo || ''}
+                      onChange={handleChange}
+                      disabled={!brandingEditMode}
+                    >
+                      <option value="">Select a logo</option>
+                      {availableImages.map(img => (
+                        <option key={img} value={img}>{img}</option>
+                      ))}
+                    </select>
+                    {settings.heroLogo && (
+                      <div className="logo-preview">
+                        <p>Preview:</p>
+                        <img src={settings.heroLogo} alt="Logo preview" style={{ maxWidth: '200px', maxHeight: '100px' }} />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-
-              <div className="form-group">
-                <label htmlFor="navLogo">Navigation Menu Logo</label>
-                <select
-                  id="navLogo"
-                  name="navLogo"
-                  value={settings.navLogo || ''}
-                  onChange={handleChange}
-                  disabled={!brandingEditMode}
-                >
-                  <option value="">Select a logo</option>
-                  {availableImages.map(img => (
-                    <option key={img} value={img}>{img}</option>
-                  ))}
-                </select>
-                {settings.navLogo && (
-                  <div className="logo-preview">
-                    <p>Preview:</p>
-                    <img src={settings.navLogo} alt="Nav logo preview" style={{ maxWidth: '60px', maxHeight: '60px' }} />
+                  <div className="form-group">
+                    <label htmlFor="navLogo">Navigation Menu Logo</label>
+                    <select
+                      id="navLogo"
+                      name="navLogo"
+                      value={settings.navLogo || ''}
+                      onChange={handleChange}
+                      disabled={!brandingEditMode}
+                    >
+                      <option value="">Select a logo</option>
+                      {availableImages.map(img => (
+                        <option key={img} value={img}>{img}</option>
+                      ))}
+                    </select>
+                    {settings.navLogo && (
+                      <div className="logo-preview">
+                        <p>Preview:</p>
+                        <img src={settings.navLogo} alt="Nav logo preview" style={{ maxWidth: '60px', maxHeight: '60px' }} />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-
+            )}
           </section>
 
-          <section className="admin-section">
-            <h3>Theme Colors</h3>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="colorRust">Primary (Rust)</label>
-                <div className="color-input-wrapper">
-                  <input
-                    id="colorRust"
-                    name="colorRust"
-                    type="color"
-                    value={settings.colorRust || '#8b4513'}
-                    onChange={handleChange}
-                    disabled={!brandingEditMode}
-                  />
-                  <input
-                    type="text"
-                    value={settings.colorRust || '#8b4513'}
-                    onChange={(e) => handleChange({ target: { name: 'colorRust', value: e.target.value } })}
-                    placeholder="#8b4513"
-                    disabled={!brandingEditMode}
-                  />
+          {/* Theme Colors Section - Collapsible */}
+          <section className="admin-section collapsible-section">
+            <button
+              className="collapsible-header"
+              onClick={() => setThemeColorsExpanded(!themeColorsExpanded)}
+              aria-expanded={themeColorsExpanded}
+            >
+              <h3 style={{ margin: 0 }}>Theme Colors</h3>
+              <span className="collapsible-toggle">{themeColorsExpanded ? '−' : '+'}</span>
+            </button>
+            {themeColorsExpanded && (
+              <div className="collapsible-content" style={{ padding: 'var(--spacing-md)' }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="colorRust">Primary (Rust)</label>
+                    <div className="color-input-wrapper">
+                      <input
+                        id="colorRust"
+                        name="colorRust"
+                        type="color"
+                        value={settings.colorRust || '#8b4513'}
+                        onChange={handleChange}
+                        disabled={!brandingEditMode}
+                      />
+                      <input
+                        type="text"
+                        value={settings.colorRust || '#8b4513'}
+                        onChange={(e) => handleChange({ target: { name: 'colorRust', value: e.target.value } })}
+                        placeholder="#8b4513"
+                        disabled={!brandingEditMode}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="colorGold">Accent (Gold)</label>
+                    <div className="color-input-wrapper">
+                      <input
+                        id="colorGold"
+                        name="colorGold"
+                        type="color"
+                        value={settings.colorGold || '#d4a574'}
+                        onChange={handleChange}
+                        disabled={!brandingEditMode}
+                      />
+                      <input
+                        type="text"
+                        value={settings.colorGold || '#d4a574'}
+                        onChange={(e) => handleChange({ target: { name: 'colorGold', value: e.target.value } })}
+                        placeholder="#d4a574"
+                        disabled={!brandingEditMode}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="colorCream">Background (Cream)</label>
+                    <div className="color-input-wrapper">
+                      <input
+                        id="colorCream"
+                        name="colorCream"
+                        type="color"
+                        value={settings.colorCream || '#f5f1e8'}
+                        onChange={handleChange}
+                        disabled={!brandingEditMode}
+                      />
+                      <input
+                        type="text"
+                        value={settings.colorCream || '#f5f1e8'}
+                        onChange={(e) => handleChange({ target: { name: 'colorCream', value: e.target.value } })}
+                        placeholder="#f5f1e8"
+                        disabled={!brandingEditMode}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="colorDarkBrown">Dark (Brown)</label>
+                    <div className="color-input-wrapper">
+                      <input
+                        id="colorDarkBrown"
+                        name="colorDarkBrown"
+                        type="color"
+                        value={settings.colorDarkBrown || '#3e2723'}
+                        onChange={handleChange}
+                        disabled={!brandingEditMode}
+                      />
+                      <input
+                        type="text"
+                        value={settings.colorDarkBrown || '#3e2723'}
+                        onChange={(e) => handleChange({ target: { name: 'colorDarkBrown', value: e.target.value } })}
+                        placeholder="#3e2723"
+                        disabled={!brandingEditMode}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="form-group">
-                <label htmlFor="colorGold">Accent (Gold)</label>
-                <div className="color-input-wrapper">
-                  <input
-                    id="colorGold"
-                    name="colorGold"
-                    type="color"
-                    value={settings.colorGold || '#d4a574'}
-                    onChange={handleChange}
-                    disabled={!brandingEditMode}
-                  />
-                  <input
-                    type="text"
-                    value={settings.colorGold || '#d4a574'}
-                    onChange={(e) => handleChange({ target: { name: 'colorGold', value: e.target.value } })}
-                    placeholder="#d4a574"
-                    disabled={!brandingEditMode}
-                  />
+            )}
+          </section>
+
+          {/* UI Interactibles Section - Collapsible */}
+          <section className="admin-section collapsible-section">
+            <button
+              className="collapsible-header"
+              onClick={() => setUiInteractiblesExpanded(!uiInteractiblesExpanded)}
+              aria-expanded={uiInteractiblesExpanded}
+            >
+              <h3 style={{ margin: 0 }}>UI Interactibles</h3>
+              <span className="collapsible-toggle">{uiInteractiblesExpanded ? '−' : '+'}</span>
+            </button>
+            {uiInteractiblesExpanded && (
+              <div className="collapsible-content" style={{ padding: 'var(--spacing-md)' }}>
+                <p className="admin-hint" style={{ marginBottom: 'var(--spacing-md)' }}>
+                  Configure the floating &ldquo;Book Now&rdquo; button that appears on the home page.
+                </p>
+
+                {/* Mobile Settings */}
+                <div className="interactible-subsection">
+                  <h4 style={{ color: 'var(--rust)', marginBottom: 'var(--spacing-sm)' }}>Mobile Settings</h4>
+
+                  <div className="toggle-container">
+                    <span className="toggle-label">Show on Mobile</span>
+                    <button
+                      type="button"
+                      onClick={() => updateInteractibleConfig('mobile', 'enabled', !(settings.interactible_config?.floatingBookNow?.mobile?.enabled !== false))}
+                      className={`toggle-switch ${settings.interactible_config?.floatingBookNow?.mobile?.enabled !== false ? 'active' : ''}`}
+                      aria-pressed={settings.interactible_config?.floatingBookNow?.mobile?.enabled !== false}
+                      disabled={!brandingEditMode}
+                    >
+                      <span className="toggle-slider" />
+                    </button>
+                    <span className="toggle-status">{settings.interactible_config?.floatingBookNow?.mobile?.enabled !== false ? 'On' : 'Off'}</span>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="mobileIcon">Icon Image</label>
+                    <select
+                      id="mobileIcon"
+                      value={settings.interactible_config?.floatingBookNow?.mobile?.icon || ''}
+                      onChange={(e) => updateInteractibleConfig('mobile', 'icon', e.target.value)}
+                      disabled={!brandingEditMode}
+                    >
+                      <option value="">Use default emoji (📅)</option>
+                      {availableButtonIcons.length > 0 ? (
+                        availableButtonIcons.map(img => (
+                          <option key={img} value={img}>{img.replace('/ui-buttons/', '')}</option>
+                        ))
+                      ) : (
+                        <option disabled>No icons in public/ui-buttons/</option>
+                      )}
+                    </select>
+                    <p className="admin-hint" style={{ marginTop: '4px', fontSize: '0.8rem' }}>
+                      Add icons to <code>public/ui-buttons/</code> folder
+                    </p>
+                    {settings.interactible_config?.floatingBookNow?.mobile?.icon && (
+                      <div className="logo-preview" style={{ height: 'auto', padding: 'var(--spacing-sm)' }}>
+                        <p>Preview:</p>
+                        <img src={settings.interactible_config?.floatingBookNow?.mobile?.icon} alt="Icon preview" style={{ maxWidth: '56px', maxHeight: '56px' }} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="mobilePosition">Position</label>
+                    <select
+                      id="mobilePosition"
+                      value={settings.interactible_config?.floatingBookNow?.mobile?.position || 'bottom-right'}
+                      onChange={(e) => updateInteractibleConfig('mobile', 'position', e.target.value)}
+                      disabled={!brandingEditMode}
+                    >
+                      <option value="bottom-right">Bottom Right</option>
+                      <option value="bottom-left">Bottom Left</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Desktop Settings */}
+                <div className="interactible-subsection" style={{ marginTop: 'var(--spacing-lg)', paddingTop: 'var(--spacing-lg)', borderTop: '1px solid var(--border-gray)' }}>
+                  <h4 style={{ color: 'var(--rust)', marginBottom: 'var(--spacing-sm)' }}>Desktop Settings</h4>
+
+                  <div className="toggle-container">
+                    <span className="toggle-label">Show on Desktop</span>
+                    <button
+                      type="button"
+                      onClick={() => updateInteractibleConfig('desktop', 'enabled', !(settings.interactible_config?.floatingBookNow?.desktop?.enabled !== false))}
+                      className={`toggle-switch ${settings.interactible_config?.floatingBookNow?.desktop?.enabled !== false ? 'active' : ''}`}
+                      aria-pressed={settings.interactible_config?.floatingBookNow?.desktop?.enabled !== false}
+                      disabled={!brandingEditMode}
+                    >
+                      <span className="toggle-slider" />
+                    </button>
+                    <span className="toggle-status">{settings.interactible_config?.floatingBookNow?.desktop?.enabled !== false ? 'On' : 'Off'}</span>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="desktopColor">Button Color</label>
+                    <div className="color-input-wrapper">
+                      <input
+                        id="desktopColor"
+                        type="color"
+                        value={settings.interactible_config?.floatingBookNow?.desktop?.color || '#8b4513'}
+                        onChange={(e) => updateInteractibleConfig('desktop', 'color', e.target.value)}
+                        disabled={!brandingEditMode}
+                      />
+                      <input
+                        type="text"
+                        value={settings.interactible_config?.floatingBookNow?.desktop?.color || '#8b4513'}
+                        onChange={(e) => updateInteractibleConfig('desktop', 'color', e.target.value)}
+                        placeholder="#8b4513"
+                        disabled={!brandingEditMode}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="desktopText">Button Text</label>
+                    <input
+                      id="desktopText"
+                      type="text"
+                      value={settings.interactible_config?.floatingBookNow?.desktop?.text || 'Book Now'}
+                      onChange={(e) => updateInteractibleConfig('desktop', 'text', e.target.value)}
+                      placeholder="Book Now"
+                      disabled={!brandingEditMode}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="colorCream">Background (Cream)</label>
-                <div className="color-input-wrapper">
-                  <input
-                    id="colorCream"
-                    name="colorCream"
-                    type="color"
-                    value={settings.colorCream || '#f5f1e8'}
-                    onChange={handleChange}
-                    disabled={!brandingEditMode}
-                  />
-                  <input
-                    type="text"
-                    value={settings.colorCream || '#f5f1e8'}
-                    onChange={(e) => handleChange({ target: { name: 'colorCream', value: e.target.value } })}
-                    placeholder="#f5f1e8"
-                    disabled={!brandingEditMode}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="colorDarkBrown">Dark (Brown)</label>
-                <div className="color-input-wrapper">
-                  <input
-                    id="colorDarkBrown"
-                    name="colorDarkBrown"
-                    type="color"
-                    value={settings.colorDarkBrown || '#3e2723'}
-                    onChange={handleChange}
-                    disabled={!brandingEditMode}
-                  />
-                  <input
-                    type="text"
-                    value={settings.colorDarkBrown || '#3e2723'}
-                    onChange={(e) => handleChange({ target: { name: 'colorDarkBrown', value: e.target.value } })}
-                    placeholder="#3e2723"
-                    disabled={!brandingEditMode}
-                  />
-                </div>
-              </div>
-            </div>
+            )}
           </section>
 
           {brandingEditMode && (
@@ -2251,7 +2533,7 @@ export default function ORMWebpage() {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage />;
+        return <HomePage settings={settings} onPageChange={setCurrentPage} />;
       case 'contact':
         return <ContactPage settings={settings} />;
       case 'faq':
